@@ -1,0 +1,82 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e5c62de01cc2460429c6915c04e5a9e8, type: 3}
+  m_Name: _Pet 2
+  m_EditorClassIdentifier: 
+  id: 9bf19e7d-e921-4b46-b39c-35639558d025
+  characterName: Dog01
+  requiredLevel: 3
+  previewSprite: {fileID: 21300000, guid: 0b4f949ddb8705e44ac581d04d006e87, type: 3}
+  lockedSprite: {fileID: 21300000, guid: 51dc29395d9ff8446bee98946939caaa, type: 3}
+  dropPrefab: {fileID: 7838959996987145679, guid: 3e3c07063af4a5b4796da7343b035316,
+    type: 3}
+  stages:
+  - previewSprite: {fileID: 21300000, guid: 0b4f949ddb8705e44ac581d04d006e87, type: 3}
+    lockedSprite: {fileID: 21300000, guid: 51dc29395d9ff8446bee98946939caaa, type: 3}
+    prefab: {fileID: 9199063344137674020, guid: 7e3272d384c72e644aa5df02492c64de,
+      type: 3}
+    healthBarOffset: {x: 0, y: 2.8125, z: 0}
+  upgrades:
+  - currencyType: 0
+    price: 0
+    stats:
+      health: 180
+      bulletDamageMultiplier: 1
+      power: 39
+      keyUpgradeNumber: -1
+    changeStage: 0
+    stageIndex: -1
+  - currencyType: 0
+    price: 400
+    stats:
+      health: 190
+      bulletDamageMultiplier: 1
+      power: 46
+      keyUpgradeNumber: 15
+    changeStage: 0
+    stageIndex: -1
+  - currencyType: 0
+    price: 500
+    stats:
+      health: 200
+      bulletDamageMultiplier: 1
+      power: 52
+      keyUpgradeNumber: 17
+    changeStage: 0
+    stageIndex: -1
+  - currencyType: 0
+    price: 620
+    stats:
+      health: 210
+      bulletDamageMultiplier: 1
+      power: 57
+      keyUpgradeNumber: 18
+    changeStage: 0
+    stageIndex: -1
+  - currencyType: 0
+    price: 730
+    stats:
+      health: 230
+      bulletDamageMultiplier: 1
+      power: 64
+      keyUpgradeNumber: 20
+    changeStage: 0
+    stageIndex: -1
+  - currencyType: 0
+    price: 880
+    stats:
+      health: 240
+      bulletDamageMultiplier: 1
+      power: 70
+      keyUpgradeNumber: 22
+    changeStage: 0
+    stageIndex: -1

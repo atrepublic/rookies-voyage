@@ -1,0 +1,38 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 54507b988ec896f4fb50215f633398e4, type: 3}
+  m_Name: UC_PetData 1
+  m_EditorClassIdentifier: 
+  petID: 1
+  petName: Dog2
+  previewSprite: {fileID: 21300000, guid: 29c5852ca2ac83b4281f721f89f26c7c, type: 3}
+  petPrefab: {fileID: 9199063344137674020, guid: 6ba65d1d7882c14479a50537e37de1ff,
+    type: 3}
+  baseHP: 100
+  requiredPlayerLevel: 2
+  unlockCost: 200
+  petWeaponPrefab: {fileID: 6347890837037930244, guid: a539ea52603b363469cbeb22cf20bb0b,
+    type: 3}
+  baseAttackPower: 5
+  upgrades:
+  - level: 1
+    cost: 200
+    attackPowerIncrease: 5
+  - level: 2
+    cost: 400
+    attackPowerIncrease: 10
+  - level: 3
+    cost: 600
+    attackPowerIncrease: 15
+  - level: 4
+    cost: 1200
+    attackPowerIncrease: 25

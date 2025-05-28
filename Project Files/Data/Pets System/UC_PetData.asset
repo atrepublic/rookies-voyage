@@ -1,0 +1,38 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 54507b988ec896f4fb50215f633398e4, type: 3}
+  m_Name: UC_PetData
+  m_EditorClassIdentifier: 
+  petID: 0
+  petName: Rookie
+  previewSprite: {fileID: 21300000, guid: 644db1b7d2ccb714789024a40728282f, type: 3}
+  petPrefab: {fileID: 9199063344137674020, guid: c9ff643c0d59ad743b471f16b0df75d7,
+    type: 3}
+  baseHP: 100
+  requiredPlayerLevel: 0
+  unlockCost: 0
+  petWeaponPrefab: {fileID: 6347890837037930244, guid: a539ea52603b363469cbeb22cf20bb0b,
+    type: 3}
+  baseAttackPower: 5
+  upgrades:
+  - level: 0
+    cost: 100
+    attackPowerIncrease: 10
+  - level: 1
+    cost: 200
+    attackPowerIncrease: 15
+  - level: 2
+    cost: 400
+    attackPowerIncrease: 20
+  - level: 3
+    cost: 800
+    attackPowerIncrease: 40

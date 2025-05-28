@@ -1,0 +1,18 @@
+fileFormatVersion: 2
+guid: 4dc34422b2ca56448abcbfc61ffefd0c
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 274208
+  packageName: Squad Shooter | Template + Editor
+  packageVersion: v1.4.0
+  assetPath: Assets/Watermelon Core/Modules/Haptic/Scripts/HapticEvent.cs
+  uploadId: 730315

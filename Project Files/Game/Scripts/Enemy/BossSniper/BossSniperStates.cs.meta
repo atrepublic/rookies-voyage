@@ -1,0 +1,18 @@
+fileFormatVersion: 2
+guid: 6ff5505bc1106a84eb606b439b578b74
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 274208
+  packageName: Squad Shooter | Template + Editor
+  packageVersion: v1.4.0
+  assetPath: Assets/Project Files/Game/Scripts/Enemy/BossSniper/BossSniperStates.cs
+  uploadId: 730315

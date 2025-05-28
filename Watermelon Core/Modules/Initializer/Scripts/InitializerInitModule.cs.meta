@@ -1,0 +1,18 @@
+fileFormatVersion: 2
+guid: d448ec3af5e46f04aa350a8a9ccbb3ef
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 274208
+  packageName: Squad Shooter | Template + Editor
+  packageVersion: v1.4.0
+  assetPath: Assets/Watermelon Core/Modules/Initializer/Scripts/InitializerInitModule.cs
+  uploadId: 730315
