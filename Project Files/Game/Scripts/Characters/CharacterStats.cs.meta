@@ -1,0 +1,18 @@
+fileFormatVersion: 2
+guid: 136a4070f836d984bbf1ec9e8aee85d1
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 274208
+  packageName: Squad Shooter | Template + Editor
+  packageVersion: v1.4.0
+  assetPath: Assets/Project Files/Game/Scripts/Characters/CharacterStats.cs
+  uploadId: 730315

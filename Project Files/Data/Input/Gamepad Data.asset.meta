@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: b8459fda821a1d245945e18295b4093d
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 11400000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 274208
+  packageName: Squad Shooter | Template + Editor
+  packageVersion: v1.4.0
+  assetPath: Assets/Project Files/Data/Input/Gamepad Data.asset
+  uploadId: 730315

@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: c5d657e03add81645a8c0157d68849b9
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 11400000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 274208
+  packageName: Squad Shooter | Template + Editor
+  packageVersion: v1.4.0
+  assetPath: Assets/Project Files/Data/Balance Database.asset
+  uploadId: 730315

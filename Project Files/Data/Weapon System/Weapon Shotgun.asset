@@ -34,8 +34,8 @@ MonoBehaviour:
     spread: 60
     power: 27
     bulletsPerShot:
-      firstValue: 3
-      secondValue: 3
+      firstValue: 1
+      secondValue: 2
     bulletSpeed:
       firstValue: 18.75
       secondValue: 28.125
@@ -71,13 +71,13 @@ MonoBehaviour:
     damage:
       firstValue: 27
       secondValue: 30
-    rangeRadius: 6.25
+    rangeRadius: 16.25
     fireRate: 0.85
-    spread: 30
+    spread: 60
     power: 33
     bulletsPerShot:
-      firstValue: 3
-      secondValue: 3
+      firstValue: 5
+      secondValue: 8
     bulletSpeed:
       firstValue: 18.75
       secondValue: 28.125

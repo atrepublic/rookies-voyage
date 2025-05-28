@@ -1,0 +1,18 @@
+fileFormatVersion: 2
+guid: c2c31c9fa5c920f4a8d44b745834aea5
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 274208
+  packageName: Squad Shooter | Template + Editor
+  packageVersion: v1.4.0
+  assetPath: Assets/Project Files/Game/Scripts/Characters/CharacterGlobalSave.cs
+  uploadId: 730315

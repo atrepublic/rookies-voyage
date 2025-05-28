@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 697235929407b7347850a78d8f27e1fc
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 11400000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 274208
+  packageName: Squad Shooter | Template + Editor
+  packageVersion: v1.4.0
+  assetPath: Assets/Project Files/Data/Game Settings.asset
+  uploadId: 730315

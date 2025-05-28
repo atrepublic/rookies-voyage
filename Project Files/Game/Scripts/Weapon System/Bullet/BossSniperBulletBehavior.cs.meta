@@ -1,0 +1,18 @@
+fileFormatVersion: 2
+guid: 477a36942b859074ab092a049196539f
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 274208
+  packageName: Squad Shooter | Template + Editor
+  packageVersion: v1.4.0
+  assetPath: Assets/Project Files/Game/Scripts/Weapon System/Bullet/BossSniperBulletBehavior.cs
+  uploadId: 730315

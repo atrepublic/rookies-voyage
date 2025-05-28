@@ -1,0 +1,18 @@
+fileFormatVersion: 2
+guid: 2e16e8d5352b89545ae40ff9c4c3191c
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 274208
+  packageName: Squad Shooter | Template + Editor
+  packageVersion: v1.4.0
+  assetPath: Assets/Project Files/Game/Scripts/UI/Custom UI Particle/UIParticleSettings.cs
+  uploadId: 730315

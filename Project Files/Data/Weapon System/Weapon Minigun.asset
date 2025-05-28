@@ -34,7 +34,7 @@ MonoBehaviour:
     spread: 5
     power: 9
     bulletsPerShot:
-      firstValue: 1
+      firstValue: 3
       secondValue: 1
     bulletSpeed:
       firstValue: 23.4375
@@ -55,7 +55,7 @@ MonoBehaviour:
     spread: 5
     power: 9
     bulletsPerShot:
-      firstValue: 1
+      firstValue: 4
       secondValue: 1
     bulletSpeed:
       firstValue: 23.4375

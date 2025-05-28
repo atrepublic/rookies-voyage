@@ -1,0 +1,18 @@
+fileFormatVersion: 2
+guid: 573d00bb6fdefd043a474d8741e6a4c2
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 274208
+  packageName: Squad Shooter | Template + Editor
+  packageVersion: v1.4.0
+  assetPath: Assets/Project Files/Game/Scripts/Enemy/Sniper/SniperEnemyBehavior.cs
+  uploadId: 730315
