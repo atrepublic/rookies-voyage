@@ -38,7 +38,7 @@ namespace Watermelon.SquadShooter
         private Vector3 shootDirection;
         
         // 추가: 치명타 텍스트 색상
-        private static readonly Color critColor = new Color(1f, 0.4f, 0f);
+        private static readonly Color critColor = new Color(1f, 0.4f, 0f); // 치명타 시 텍스트 색상
 
         /// <summary>
         /// 샷건 총의 동작을 초기화합니다.
@@ -48,11 +48,13 @@ namespace Watermelon.SquadShooter
         /// <param name="weapon">이 총기의 무기 데이터</param>
         public override void Init(CharacterBehaviour characterBehaviour, WeaponData weapon)
         {
-            base.Init(characterBehaviour, weapon);
+            base.Init(characterBehaviour, weapon); // 부모 클래스 초기화 호출
             WeaponUpgrade currentUpgrade = weapon.GetCurrentUpgrade();
-            GameObject bulletObj = currentUpgrade.BulletPrefab;
-            bulletPool = new Pool(bulletObj, bulletObj.name);
-            RecalculateDamage();
+            GameObject bulletObj = currentUpgrade.BulletPrefab; // 사용할 총알 프리팹 가져오기
+
+            // 총알 이름으로 오브젝트 풀 생성
+            bulletPool = new Pool(bulletObj, bulletObj.name + "_ShotgunPool"); // 풀 이름에 접미사 추가하여 다른 풀과 구분 용이하게 함
+            RecalculateDamage(); // 데미지 및 관련 스탯 계산
         }
 
         /// <summary>
@@ -61,8 +63,12 @@ namespace Watermelon.SquadShooter
         /// </summary>
         private void OnDestroy()
         {
+            // 풀이 존재하면 PoolManager를 통해 안전하게 파괴
             if (bulletPool != null)
+            {
                 PoolManager.DestroyPool(bulletPool);
+                bulletPool = null; // 참조 해제
+            }
         }
 
         /// <summary>
@@ -80,10 +86,10 @@ namespace Watermelon.SquadShooter
         public override void RecalculateDamage()
         {
             WeaponUpgrade currentUpgrade = weapon.GetCurrentUpgrade();
-            damage = currentUpgrade.Damage;
-            bulletSpreadAngle = currentUpgrade.Spread;
-            attackDelay = 1f / currentUpgrade.FireRate;
-            bulletSpeed = currentUpgrade.BulletSpeed;
+            damage = currentUpgrade.Damage; // 기본 데미지 설정
+            bulletSpreadAngle = currentUpgrade.Spread; // 산탄 각도 설정
+            attackDelay = 1f / currentUpgrade.FireRate; // 공격 딜레이(연사 간격) 계산
+            bulletSpeed = currentUpgrade.BulletSpeed; // 총알 속도 설정
         }
 
         /// <summary>
@@ -92,77 +98,130 @@ namespace Watermelon.SquadShooter
         /// </summary>
         public override void GunUpdate()
         {
-            AttackButtonBehavior.SetReloadFill(1 - (Time.timeSinceLevelLoad - lastShootTime) / (nextShootTime - lastShootTime));
+            // 재장전 UI 진행 상태 업데이트
+            float reloadProgress = (nextShootTime > lastShootTime) ? (1 - (Time.timeSinceLevelLoad - lastShootTime) / (nextShootTime - lastShootTime)) : 1f;
+            AttackButtonBehavior.SetReloadFill(Mathf.Clamp01(reloadProgress));
 
+            // 주변에 적이 없으면 발사 로직을 진행하지 않음
             if (!characterBehaviour.IsCloseEnemyFound)
                 return;
 
+            // 다음 발사 가능 시간이 되지 않았거나, 캐릭터가 공격 불가능 상태이면 발사 로직을 진행하지 않음
             if (nextShootTime >= Time.timeSinceLevelLoad) return;
             if (!characterBehaviour.IsAttackingAllowed) return;
 
-            AttackButtonBehavior.SetReloadFill(0);
+            AttackButtonBehavior.SetReloadFill(0); // 발사 직전 재장전 UI 초기화
 
+            // 가장 가까운 적을 향하는 발사 방향 계산 (Y축은 총구 높이로 고정)
+            // shootDirection 계산 전에 ClosestEnemyBehaviour null 체크 추가
+            if (characterBehaviour.ClosestEnemyBehaviour == null)
+            {
+                characterBehaviour.SetTargetUnreachable(); // 타겟을 찾을 수 없음으로 처리
+                return; // 발사 로직 중단
+            }
             shootDirection = characterBehaviour.ClosestEnemyBehaviour.transform.position.SetY(shootPoint.position.y) - shootPoint.position;
 
-            if (Physics.Raycast(transform.position, shootDirection, out var hitInfo, 300f, targetLayers))
+            // 레이캐스트를 사용하여 발사 경로에 적이 있는지, 시야각 내에 있는지 확인
+            if (Physics.Raycast(shootPoint.position, shootDirection.normalized, out var hitInfo, 300f, targetLayers)) // 발사 지점에서 발사
             {
-                if (hitInfo.collider.gameObject.layer == PhysicsHelper.LAYER_ENEMY)
+                if (hitInfo.collider.gameObject.layer == PhysicsHelper.LAYER_ENEMY) // 적 레이어와 충돌했는지 확인
                 {
-                    if (Vector3.Angle(shootDirection, transform.forward) < 40f)
+                    if (Vector3.Angle(shootDirection.normalized, transform.forward.normalized) < 40f) // 총구 방향과 적 방향 사이의 각도 확인
                     {
-                        characterBehaviour.SetTargetActive();
-                        shootTweenCase.KillActive();
+                        characterBehaviour.SetTargetActive(); // 타겟 유효 상태로 설정
+
+                        // 총기 발사 애니메이션 (반동 효과)
+                        shootTweenCase.KillActive(); // 이전 애니메이션 중지
                         shootTweenCase = transform.DOLocalMoveZ(-0.15f, 0.1f).OnComplete(delegate
                         {
                             shootTweenCase = transform.DOLocalMoveZ(0, 0.15f);
                         });
 
-                        shootParticleSystem.Play();
+                        if(shootParticleSystem != null) shootParticleSystem.Play(); // 발사 파티클 재생
+                        
+                        // 다음 발사 시간 및 마지막 발사 시간 업데이트
                         nextShootTime = Time.timeSinceLevelLoad + attackDelay;
                         lastShootTime = Time.timeSinceLevelLoad;
 
+                        // 발사할 총알 수 결정 (WeaponData 설정에 따름)
                         int bulletsNumber = weapon.GetCurrentUpgrade().BulletsPerShot.Random();
-                        Debug.Log($"[ShotgunBehavior] 발사될 총알 수 (bulletsNumber): {bulletsNumber}"); // <--- 여기에 Debug.Log 추가!
+                        Debug.Log($"[ShotgunBehavior] 발사될 총알 수 (bulletsNumber): {bulletsNumber}");
 
+                        // 결정된 총알 수만큼 반복하여 발사
                         for (int i = 0; i < bulletsNumber; i++)
                         {
-                            PlayerBulletBehavior bullet = bulletPool.GetPooledObject().SetPosition(shootPoint.position).SetEulerAngles(characterBehaviour.transform.eulerAngles).GetComponent<PlayerBulletBehavior>();
+                            Debug.Log($"[ShotgunBehavior] 루프 {i}: 총알 생성 시도");
+                            
+                            // 풀에서 총알 오브젝트 가져오기 및 초기 위치/회전 설정
+                            GameObject bulletGO = bulletPool.GetPooledObject();
+                            if (bulletGO == null)
+                            {
+                                Debug.LogError($"[ShotgunBehavior] 루프 {i}: bulletPool.GetPooledObject()가 null을 반환했습니다!");
+                                continue; // 다음 총알로 넘어감
+                            }
+                            bulletGO.transform.SetPositionAndRotation(shootPoint.position, Quaternion.LookRotation(shootDirection.normalized)); // 방향을 정확히 설정
+                            
+                            PlayerBulletBehavior bullet = bulletGO.GetComponent<PlayerBulletBehavior>();
+                            if (bullet == null)
+                            {
+                                Debug.LogError($"[ShotgunBehavior] 루프 {i}: 총알 프리팹에 PlayerBulletBehavior 컴포넌트가 없습니다! 오브젝트명: {bulletGO.name}");
+                                bulletGO.SetActive(false); // 사용 불가 오브젝트는 풀로 반환되도록 비활성화
+                                continue; 
+                            }
+                            Debug.Log($"[ShotgunBehavior] 루프 {i}: bullet.gameObject.name = {bullet.gameObject.name}, 활성 상태: {bullet.gameObject.activeSelf}");
 
-                            // ▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼ [ 치명타 및 플로팅 텍스트 로직 추가 ] ▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼
+                            // 데미지 및 치명타 계산
                             var (damageValue, isCritical) = CalculateFinalDamageWithCrit();
                             float finalDamage = damageValue * characterBehaviour.Stats.BulletDamageMultiplier;
-
+                            
+                            // 총알 초기화 (데미지, 속도, 타겟, 비활성화 시간 등)
                             bullet.Init(finalDamage, bulletSpeed.Random(), characterBehaviour.ClosestEnemyBehaviour, bulletDisableTime);
+                            Debug.Log($"[ShotgunBehavior] 루프 {i}: 총알 초기화 완료, 초기 위치: {bullet.transform.position}");
 
-                            Color textColor = isCritical ? critColor : Color.white;
-                            FloatingTextController.SpawnFloatingText(
-                                "Hit", // MiniGunBehavior에서 사용하는 이름과 동일하게 (첨부 파일 기준)
-                                finalDamage.ToString(),
-                                characterBehaviour.ClosestEnemyBehaviour.transform.position,
-                                Quaternion.identity,
-                                1.0f,
-                                textColor,
-                                isCritical
-                            );
-                            // ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲ [ 로직 추가 완료 ] ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲
-
-                            bullet.transform.Rotate(new Vector3(0f, i == 0 ? 0f : Random.Range(bulletSpreadAngle * -0.5f, bulletSpreadAngle * 0.5f), 0f));
+                            // ▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼ [ 플로팅 텍스트 로직 (Null 체크 추가) ] ▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼
+                            if (characterBehaviour.ClosestEnemyBehaviour != null) // ⭐ 조치 방안: ClosestEnemyBehaviour null 체크
+                            {
+                                Color textColor = isCritical ? critColor : Color.white;
+                                FloatingTextController.SpawnFloatingText(
+                                    "Hit", 
+                                    finalDamage.ToString("F0"), // 데미지를 정수로 표시
+                                    characterBehaviour.ClosestEnemyBehaviour.transform.position + Vector3.up * 1.5f, // 텍스트 위치 약간 위로 조정
+                                    Quaternion.identity,
+                                    isCritical ? 1.2f : 1.0f, // 치명타 시 텍스트 크기 약간 크게
+                                    textColor,
+                                    isCritical
+                                );
+                            }
+                            else
+                            {
+                                Debug.LogWarning($"[ShotgunBehavior] 루프 {i}: ClosestEnemyBehaviour is null. 플로팅 텍스트를 생성하지 않습니다.");
+                            }
+                            // ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲ [ 로직 수정 완료 ] ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲
+                            
+                            // 총알에 산탄 각도 적용
+                            bullet.transform.Rotate(new Vector3(0f, (i == 0 && bulletsNumber == 1) ? 0f : Random.Range(bulletSpreadAngle * -0.5f, bulletSpreadAngle * 0.5f), 0f)); // 단발일 경우 가운데로
+                            Debug.Log($"[ShotgunBehavior] 루프 {i}: 총알 회전 적용 후 forward: {bullet.transform.forward}");
                         }
 
-                        characterBehaviour.OnGunShooted();
+                        characterBehaviour.OnGunShooted(); // 캐릭터 발사 이벤트 호출
+                        
+                        // 카메라 흔들림 효과
                         VirtualCameraCase gameCameraCase = CameraController.GetCamera(CameraType.Game);
-                        gameCameraCase.Shake(0.04f, 0.04f, 0.3f, 0.8f);
+                        if(gameCameraCase != null) gameCameraCase.Shake(0.04f, 0.04f, 0.3f, 0.8f);
+                        
+                        // 발사 사운드 재생
                         AudioController.PlaySound(AudioController.AudioClips.shotShotgun);
                     }
+                    // else : 시야각 벗어남 (별도 처리 없음)
                 }
-                else
+                else // 적이 아닌 다른 장애물과 충돌
                 {
-                    characterBehaviour.SetTargetUnreachable();
+                    characterBehaviour.SetTargetUnreachable(); // 타겟 도달 불가 상태로 설정
                 }
             }
-            else
+            else // 레이캐스트에 아무것도 맞지 않음
             {
-                characterBehaviour.SetTargetUnreachable();
+                characterBehaviour.SetTargetUnreachable(); // 타겟 도달 불가 상태로 설정
             }
         }
 
@@ -172,17 +231,16 @@ namespace Watermelon.SquadShooter
         /// </summary>
         private void OnDrawGizmos()
         {
-            if (characterBehaviour == null)
-                return;
-
-            if (characterBehaviour.ClosestEnemyBehaviour == null)
-                return;
-
-            Color defCol = Gizmos.color;
-            Gizmos.color = Color.red;
-            Vector3 shootDirectionGizmo = characterBehaviour.ClosestEnemyBehaviour.transform.position.SetY(shootPoint.position.y) - shootPoint.position;
-            Gizmos.DrawLine(shootPoint.position - shootDirectionGizmo.normalized * 10f, characterBehaviour.ClosestEnemyBehaviour.transform.position.SetY(shootPoint.position.y));
-            Gizmos.color = defCol;
+            // 에디터에서만, 필요한 객체가 모두 할당되어 있을 때만 기즈모 표시
+            if (Application.isEditor && characterBehaviour != null && characterBehaviour.ClosestEnemyBehaviour != null && shootPoint != null)
+            {
+                Color defCol = Gizmos.color;
+                Gizmos.color = Color.red;
+                // shootDirection을 사용하거나, 현재 ClosestEnemyBehaviour 기준으로 다시 계산하여 표시
+                Vector3 currentShootDirectionGizmo = characterBehaviour.ClosestEnemyBehaviour.transform.position.SetY(shootPoint.position.y) - shootPoint.position;
+                Gizmos.DrawLine(shootPoint.position, shootPoint.position + currentShootDirectionGizmo.normalized * 10f); // 10 유닛 길이로 방향 표시
+                Gizmos.color = defCol;
+            }
         }
 
         /// <summary>
@@ -194,7 +252,7 @@ namespace Watermelon.SquadShooter
             if (bulletPool != null)
             {
                 PoolManager.DestroyPool(bulletPool);
-                bulletPool = null;
+                bulletPool = null; // 참조 해제
             }
         }
 
@@ -204,8 +262,15 @@ namespace Watermelon.SquadShooter
         /// <param name="characterGraphics">총기를 장착할 캐릭터 그래픽스 컴포넌트</param>
         public override void PlaceGun(BaseCharacterGraphics characterGraphics)
         {
-            transform.SetParent(characterGraphics.ShootGunHolderTransform);
-            transform.ResetLocal();
+            if (characterGraphics.ShootGunHolderTransform != null) // 홀더 트랜스폼 유효성 검사
+            {
+                transform.SetParent(characterGraphics.ShootGunHolderTransform);
+                transform.ResetLocal(); // 로컬 위치, 회전, 스케일 초기화
+            }
+            else
+            {
+                Debug.LogError($"[ShotgunBehavior] PlaceGun: CharacterGraphics에 ShootGunHolderTransform이 할당되지 않았습니다!");
+            }
         }
 
         /// <summary>
@@ -214,6 +279,7 @@ namespace Watermelon.SquadShooter
         /// </summary>
         public override void Reload()
         {
+            // 현재 활성화된 모든 총알을 풀로 반환 (비활성화)
             bulletPool?.ReturnToPoolEverything();
         }
     }
