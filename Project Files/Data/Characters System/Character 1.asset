@@ -30,6 +30,7 @@ MonoBehaviour:
     price: 0
     stats:
       health: 100
+      moveSpeed: 4.7
       bulletDamageMultiplier: 1
       power: 10
       keyUpgradeNumber: 0
@@ -41,10 +42,11 @@ MonoBehaviour:
     price: 80
     stats:
       health: 110
+      moveSpeed: 5
       bulletDamageMultiplier: 1
       power: 16
       keyUpgradeNumber: 1
-      critChance: 0.3
+      critChance: 0.06
       critMultiplier: 2
     changeStage: 0
     stageIndex: -1
@@ -52,10 +54,11 @@ MonoBehaviour:
     price: 100
     stats:
       health: 120
+      moveSpeed: 5.5
       bulletDamageMultiplier: 1
       power: 21
       keyUpgradeNumber: 3
-      critChance: 0.4
+      critChance: 0.07
       critMultiplier: 2
     changeStage: 0
     stageIndex: -1
@@ -63,10 +66,11 @@ MonoBehaviour:
     price: 120
     stats:
       health: 130
+      moveSpeed: 8
       bulletDamageMultiplier: 1
       power: 28
       keyUpgradeNumber: 6
-      critChance: 0.5
+      critChance: 0.08
       critMultiplier: 2
     changeStage: 0
     stageIndex: -1
@@ -74,10 +78,11 @@ MonoBehaviour:
     price: 200
     stats:
       health: 150
+      moveSpeed: 5
       bulletDamageMultiplier: 1
       power: 34
       keyUpgradeNumber: 9
-      critChance: 0.55
+      critChance: 0.09
       critMultiplier: 2
     changeStage: 0
     stageIndex: -1
@@ -85,10 +90,11 @@ MonoBehaviour:
     price: 210
     stats:
       health: 160
+      moveSpeed: 9
       bulletDamageMultiplier: 1
       power: 39
       keyUpgradeNumber: 11
-      critChance: 0.6
+      critChance: 0.1
       critMultiplier: 2
     changeStage: 0
     stageIndex: -1

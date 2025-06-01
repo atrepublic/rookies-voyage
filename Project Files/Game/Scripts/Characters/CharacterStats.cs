@@ -21,6 +21,12 @@ namespace Watermelon.SquadShooter
         // 외부에서 체력 값에 접근하기 위한 프로퍼티
         public int Health => health;
 
+        // ▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼ [ MoveSpeed 필드 추가 ] ▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼
+        [Tooltip("해당 레벨/단계에서의 캐릭터 이동 속도")]
+        [SerializeField] float moveSpeed = 5.0f; // 기본값 예시, 실제 값은 각 CharacterUpgrade에서 설정
+        public float MoveSpeed => moveSpeed;
+        // ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲ [ 추가 완료 ] ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲
+
         [Space] // 인스펙터 공백
         [Tooltip("해당 레벨/단계에서의 캐릭터 총알 데미지 배율 (기본값 1.0)")]
         [SerializeField] float bulletDamageMultiplier = 1.0f;

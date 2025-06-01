@@ -592,18 +592,29 @@ namespace Watermelon.SquadShooter
 
             var joystick = Control.CurrentControl;
 
-            if (isMovementActive && joystick != null && joystick.IsMovementInputNonZero && joystick.MovementInput.sqrMagnitude > 0.1f) // joystick null 체크
+            if (isMovementActive && joystick != null && joystick.IsMovementInputNonZero && joystick.MovementInput.sqrMagnitude > 0.1f)
             {
                 if (!isMoving)
                 {
                     isMoving = true;
-                    speed = 0;
+                    speed = 0; // 현재 속도 (가속도 적용될 변수)
                     if (graphics != null) graphics.OnMovingStarted();
                 }
 
-                if (activeMovementSettings != null) // null 체크
+                // activeMovementSettings는 회전 속도, 가속도 등 다른 설정에 계속 사용될 수 있습니다.
+                if (activeMovementSettings != null && stats != null) // stats가 null이 아닌지 반드시 확인!
                 {
-                    float maxAllowedSpeed = Mathf.Clamp01(joystick.MovementInput.magnitude) * activeMovementSettings.MoveSpeed;
+                    // ▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼ [ 1. 최대 이동 속도 기준 변경 ] ▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼
+                    // 기존 코드 (주석 처리 또는 삭제)
+                    // float maxAllowedSpeed = Mathf.Clamp01(joystick.MovementInput.magnitude) * activeMovementSettings.MoveSpeed;
+
+                    // 수정된 코드: stats.MoveSpeed를 최대 속도 기준으로 사용합니다.
+                    float characterMaxSpeed = stats.MoveSpeed; // 업그레이드된 MoveSpeed를 사용
+                    float maxAllowedSpeed = Mathf.Clamp01(joystick.MovementInput.magnitude) * characterMaxSpeed;
+                    // ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲ [ 변경 완료 ] ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲
+
+                    // 가속/감속 로직은 기존 activeMovementSettings의 Acceleration 값을 계속 사용할 수 있습니다.
+                    // CharacterStats에 Acceleration을 추가하고 싶다면 그 값을 사용하도록 변경할 수도 있습니다.
                     if (speed > maxAllowedSpeed)
                     {
                         speed -= activeMovementSettings.Acceleration * Time.deltaTime;
@@ -614,26 +625,45 @@ namespace Watermelon.SquadShooter
                         speed += activeMovementSettings.Acceleration * Time.deltaTime;
                         if (speed > maxAllowedSpeed) speed = maxAllowedSpeed;
                     }
-                    movementVelocity = transform.forward * speed;
+
+                    movementVelocity = transform.forward * speed; // 이 값은 주로 적을 향해 있을 때의 전진 속도를 나타낼 수 있습니다.
+
+                    // 실제 이동 처리: joystick.MovementInput 방향으로 'speed' 만큼 이동합니다.
+                    // NavMeshAgent를 사용하지 않고 직접 Transform을 조작하는 경우:
                     transform.position += joystick.MovementInput * Time.deltaTime * speed;
+
+                    // 만약 NavMeshAgent로 이동을 제어한다면 (현재 코드는 transform.position을 직접 사용 중):
+                    // if (agent != null && agent.isActiveAndEnabled && agent.isOnNavMesh)
+                    // {
+                    //     agent.speed = speed; // NavMeshAgent의 속도를 현재 계산된 speed로 설정
+                    //     // agent.Move(joystick.MovementInput * speed * Time.deltaTime); 또는
+                    //     // agent.SetDestination(transform.position + joystick.MovementInput * someDistanceFactor);
+                    // }
                 }
 
 
-                if (graphics != null && activeMovementSettings != null) // null 체크
+                if (graphics != null && activeMovementSettings != null && stats != null) // stats가 null이 아닌지 확인
                 {
-                     graphics.OnMoving(Mathf.InverseLerp(0, activeMovementSettings.MoveSpeed, speed), joystick.MovementInput, IsCloseEnemyFound);
+                    // ▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼ [ 2. 애니메이션 속도 계산 기준 변경 ] ▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼
+                    // 기존 코드 (주석 처리 또는 삭제)
+                    // graphics.OnMoving(Mathf.InverseLerp(0, activeMovementSettings.MoveSpeed, speed), joystick.MovementInput, IsCloseEnemyFound);
+
+                    // 수정된 코드: speedPercent 계산 시 stats.MoveSpeed를 기준으로 합니다.
+                    graphics.OnMoving(Mathf.InverseLerp(0, stats.MoveSpeed, speed), joystick.MovementInput, IsCloseEnemyFound);
+                    // ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲ [ 변경 완료 ] ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲
                 }
 
 
-                if (!IsCloseEnemyFound)
+                if (!IsCloseEnemyFound) // 가까운 적이 없을 때만 조이스틱 방향으로 회전
                 {
-                    if(joystick.MovementInput.sqrMagnitude > 0.01f) // 0벡터가 아닐 때만 회전
+                    if(joystick.MovementInput.sqrMagnitude > 0.01f) 
                     {
-                        transform.rotation = Quaternion.Lerp(transform.rotation, Quaternion.LookRotation(joystick.MovementInput.normalized), Time.deltaTime * (activeMovementSettings != null ? activeMovementSettings.RotationSpeed : 10f) ); // activeMovementSettings null 체크
+                        // 회전 속도는 activeMovementSettings의 RotationSpeed를 계속 사용할 수 있습니다.
+                        transform.rotation = Quaternion.Lerp(transform.rotation, Quaternion.LookRotation(joystick.MovementInput.normalized), Time.deltaTime * (activeMovementSettings != null ? activeMovementSettings.RotationSpeed : 10f) ); 
                     }
                 }
             }
-            else
+            else // 이동 입력이 없을 때
             {
                 if (isMoving)
                 {
@@ -644,18 +674,20 @@ namespace Watermelon.SquadShooter
                 }
             }
 
-            if (IsCloseEnemyFound && closestEnemyBehaviour != null && playerTarget != null) // null 체크
+            // ... (적 타겟팅 시 회전 로직 및 나머지 Update() 메소드 내용은 기존과 동일하게 유지) ...
+
+            if (IsCloseEnemyFound && closestEnemyBehaviour != null && playerTarget != null) 
             {
-                playerTarget.position = Vector3.Lerp(playerTarget.position, new Vector3(closestEnemyBehaviour.transform.position.x, transform.position.y, closestEnemyBehaviour.transform.position.z), Time.deltaTime * (activeMovementSettings != null ? activeMovementSettings.RotationSpeed : 10f)); // activeMovementSettings null 체크
-                if((playerTarget.position - transform.position).sqrMagnitude > 0.001f) // LookAt 방향이 0벡터가 아닐 때만
+                playerTarget.position = Vector3.Lerp(playerTarget.position, new Vector3(closestEnemyBehaviour.transform.position.x, transform.position.y, closestEnemyBehaviour.transform.position.z), Time.deltaTime * (activeMovementSettings != null ? activeMovementSettings.RotationSpeed : 10f)); 
+                if((playerTarget.position - transform.position).sqrMagnitude > 0.001f) 
                 {
                     transform.LookAt(new Vector3(playerTarget.position.x, transform.position.y, playerTarget.position.z));
                 }
             }
 
-            if (targetRing != null) targetRing.transform.rotation = Quaternion.identity; // null 체크
-            if (healthbarBehaviour != null) healthbarBehaviour.FollowUpdate(); // null 체크
-            if (aimRingBehavior != null) aimRingBehavior.UpdatePosition(); // null 체크
+            if (targetRing != null) targetRing.transform.rotation = Quaternion.identity; 
+            if (healthbarBehaviour != null) healthbarBehaviour.FollowUpdate(); 
+            if (aimRingBehavior != null) aimRingBehavior.UpdatePosition(); 
         }
 
         private void FixedUpdate()

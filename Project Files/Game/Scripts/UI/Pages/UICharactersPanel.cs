@@ -3,10 +3,14 @@
 // 기능: 캐릭터 업그레이드 패널 UI를 관리하고 표시합니다.
 // 용도: 캐릭터 목록을 보여주고, 각 캐릭터의 상태(잠금 해제, 업그레이드 가능 여부)를 표시하며,
 //      캐릭터 선택 및 업그레이드 기능을 제공합니다. 또한 캐릭터 등장 애니메이션을 관리합니다.
+//      [최종 수정] 선택된 캐릭터의 상세 능력치 표시, 업그레이드 시 강조 애니메이션 기능 통합 및 오류 수정.
 //====================================================================================================
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.UI; // Image 컴포넌트 사용을 위해 추가
+using TMPro;         // TextMeshProUGUI 사용을 위해 추가
+using Watermelon;    // Watermelon 프레임워크
 
 namespace Watermelon.SquadShooter
 {
@@ -16,294 +20,348 @@ namespace Watermelon.SquadShooter
         [Tooltip("스테이지 별 프리팹입니다. 캐릭터 업그레이드 단계에 따라 표시됩니다.")]
         [SerializeField] private GameObject stageStarPrefab;
 
-        private CharactersDatabase charactersDatabase; // 캐릭터 데이터베이스
+        // ▼▼▼ 상세 능력치를 표시할 UI 필드 (TextMeshProUGUI) ▼▼▼
+        [Header("선택된 캐릭터 능력치 표시 UI (General Indicators)")]
+        [SerializeField] private TextMeshProUGUI generalHealthText;
+        [SerializeField] private TextMeshProUGUI generalMoveSpeedText;
+        [SerializeField] private TextMeshProUGUI generalCritChanceText;
+        [SerializeField] private TextMeshProUGUI generalCritMultiplierText;
+        [SerializeField] private TextMeshProUGUI generalCurrentLevelText;
+        // [SerializeField] private TextMeshProUGUI generalPowerText; // 필요시 주석 해제 및 에디터 연결
 
-        private Pool stageStarPool; // 스테이지 별 오브젝트 풀
+        // ▼▼▼ 각 능력치 인디케이터의 애니메이터(UIStatIndicatorAnimator) 참조 필드 ▼▼▼
+        [Header("선택된 캐릭터 능력치 애니메이터 (General Indicators)")]
+        [SerializeField] private UIStatIndicatorAnimator generalHealthAnimator;
+        [SerializeField] private UIStatIndicatorAnimator generalMoveSpeedAnimator;
+        [SerializeField] private UIStatIndicatorAnimator generalCritChanceAnimator;
+        [SerializeField] private UIStatIndicatorAnimator generalCritMultiplierAnimator;
+        [SerializeField] private UIStatIndicatorAnimator generalCurrentLevelAnimator;
+        // [SerializeField] private UIStatIndicatorAnimator generalPowerAnimator; // 필요시 주석 해제 및 에디터 연결
 
-        /// <summary>
-        /// 현재 선택된 캐릭터의 인덱스를 가져오는 프로퍼티입니다.
-        /// 캐릭터 인덱스를 안전하게 반환합니다.
-        /// </summary>
+        private CharactersDatabase charactersDatabase;
+        private Pool stageStarPool;
+
         protected override int SelectedIndex => Mathf.Clamp(CharactersController.GetCharacterIndex(CharactersController.SelectedCharacter), 0, int.MaxValue);
 
-        /// <summary>
-        /// 스테이지 별 오브젝트 풀에서 오브젝트를 가져오는 함수입니다.
-        /// </summary>
-        /// <returns>풀링된 스테이지 별 게임 오브젝트</returns>
         public GameObject GetStageStarObject()
         {
             return stageStarPool.GetPooledObject();
         }
 
         /// <summary>
-        /// 현재 캐릭터 패널들 중에 플레이어가 수행할 수 있는 액션(새로운 캐릭터 해제 또는 업그레이드)이 있는지 확인하는 함수입니다.
+        /// 현재 선택된 캐릭터의 상세 능력치를 "General Indicator" UI 영역에 업데이트합니다.
         /// </summary>
-        /// <returns>수행 가능한 액션이 하나라도 있으면 true, 없으면 false를 반환합니다.</returns>
-        public bool IsAnyActionAvailable()
+        private void UpdateSelectedCharacterStatsDisplay()
         {
-            // 모든 아이템 패널을 순회하며 새로운 캐릭터 해제 또는 다음 업그레이드 가능 여부 확인
-            for (int i = 0; i < itemPanels.Count; i++)
+            CharacterData selectedCharacter = CharactersController.SelectedCharacter;
+
+            if (selectedCharacter == null || !selectedCharacter.IsUnlocked())
             {
-                if (itemPanels[i].IsNewCharacterOpened())
-                    return true;
-
-                if (itemPanels[i].IsNextUpgradeCanBePurchased())
-                    return true;
-            }
-
-            return false; // 수행 가능한 액션이 없으면 false 반환
-        }
-
-        /// <summary>
-        /// 게임패드 버튼 태그를 활성화하는 함수입니다.
-        /// 캐릭터 패널에서 사용되는 게임패드 버튼 태그를 설정합니다.
-        /// </summary>
-        protected override void EnableGamepadButtonTag()
-        {
-            // UI 게임패드 버튼의 Characters 태그 활성화
-            UIGamepadButton.EnableTag(UIGamepadButtonTag.Characters);
-        }
-
-        #region Animation
-
-        private bool isAnimationPlaying; // 현재 애니메이션이 재생 중인지 나타내는 플래그
-        private Coroutine animationCoroutine; // 현재 실행 중인 애니메이션 코루틴
-
-        private static bool isControlBlocked = false; // 애니메이션 재생 중 컨트롤이 차단되었는지 나타내는 플래그
-        /// <summary>
-        /// 애니메이션 재생으로 인해 컨트롤이 차단되었는지 확인하는 프로퍼티입니다.
-        /// </summary>
-        public static bool IsControlBlocked => isControlBlocked;
-
-        private static List<CharacterDynamicAnimation> characterDynamicAnimations = new List<CharacterDynamicAnimation>(); // 캐릭터 동적 애니메이션 목록
-
-        /// <summary>
-        /// 현재 실행 중인 애니메이션을 리셋하는 함수입니다.
-        /// 코루틴을 중지하고 애니메이션 관련 변수를 초기화합니다.
-        /// </summary>
-        private void ResetAnimations()
-        {
-            // 애니메이션이 재생 중이면 중지
-            if (isAnimationPlaying)
-            {
-                StopCoroutine(animationCoroutine);
-
-                isAnimationPlaying = false;
-                animationCoroutine = null;
-            }
-
-            // 캐릭터 동적 애니메이션 목록 초기화
-            characterDynamicAnimations = new List<CharacterDynamicAnimation>();
-        }
-
-        /// <summary>
-        /// 캐릭터 동적 애니메이션을 시작하는 함수입니다.
-        /// 애니메이션이 목록에 있으면 코루틴을 시작합니다.
-        /// </summary>
-        private void StartAnimations()
-        {
-            // 애니메이션이 이미 재생 중이면 리턴
-            if (isAnimationPlaying)
+                if (generalHealthText != null) generalHealthText.text = "-";
+                if (generalMoveSpeedText != null) generalMoveSpeedText.text = "-";
+                if (generalCritChanceText != null) generalCritChanceText.text = "-";
+                if (generalCritMultiplierText != null) generalCritMultiplierText.text = "-";
+                if (generalCurrentLevelText != null) generalCurrentLevelText.text = "LV. -";
+                // if (generalPowerText != null) generalPowerText.text = "-"; 
                 return;
+            }
 
-            // 캐릭터 동적 애니메이션 목록이 비어있지 않으면 애니메이션 시작
-            if (!characterDynamicAnimations.IsNullOrEmpty())
+            CharacterUpgrade currentCharacterUpgrade = selectedCharacter.GetCurrentUpgrade();
+            if (currentCharacterUpgrade == null) return;
+
+            CharacterStats currentStats = currentCharacterUpgrade.Stats;
+            if (currentStats == null) return;
+
+            if (generalHealthText != null)
+                generalHealthText.text = currentStats.Health.ToString();
+            if (generalMoveSpeedText != null)
+                generalMoveSpeedText.text = currentStats.MoveSpeed.ToString("F1");
+            if (generalCritChanceText != null)
+                generalCritChanceText.text = $"{currentStats.CritChance * 100:F0}%";
+            if (generalCritMultiplierText != null)
+                generalCritMultiplierText.text = $"{currentStats.CritMultiplier:F1}x";
+            if (generalCurrentLevelText != null)
+                generalCurrentLevelText.text = $"LV. {selectedCharacter.GetCurrentUpgradeIndex() + 1}";
+            
+            // if (generalPowerText != null) generalPowerText.text = currentStats.Power.ToString();
+        }
+
+        // 이벤트 구독 및 해제
+        private void OnEnable()
+        {
+            CharactersController.OnCharacterSelectedEvent += OnCharacterSelected;
+            CharactersController.OnCharacterUpgradedEvent += OnCharacterUpgraded;
+
+            // 패널 활성화 시 현재 선택된 캐릭터 정보로 UI 즉시 업데이트
+            if (CharactersController.SelectedCharacter != null)
             {
-                isControlBlocked = true; // 컨트롤 차단
-                scrollView.enabled = false; // 스크롤 뷰 비활성화
-
-                isAnimationPlaying = true; // 애니메이션 재생 플래그 설정
-
-                // 동적 애니메이션 코루틴 시작
-                animationCoroutine = StartCoroutine(DynamicAnimationCoroutine());
+                UpdateSelectedCharacterStatsDisplay();
             }
         }
 
-        /// <summary>
-        /// 특정 캐릭터 패널로 스크롤하는 코루틴 함수입니다.
-        /// 대상 패널이 보이도록 스크롤 뷰를 이동합니다.
-        /// </summary>
-        /// <param name="characterPanelUI">스크롤할 대상 캐릭터 패널 UI</param>
-        private IEnumerator ScrollCoroutine(CharacterPanelUI characterPanelUI)
+        private void OnDisable()
         {
-            // 대상 패널이 보이도록 스크롤 뷰의 콘텐츠 위치 계산
-            float scrollOffsetX = -(characterPanelUI.RectTransform.anchoredPosition.x - SCROLL_ELEMENT_WIDTH - SCROLL_SIDE_OFFSET);
+            CharactersController.OnCharacterSelectedEvent -= OnCharacterSelected;
+            CharactersController.OnCharacterUpgradedEvent -= OnCharacterUpgraded;
+        }
 
-            // 현재 스크롤 위치와 목표 스크롤 위치의 차이 계산
-            float positionDiff = Mathf.Abs(scrollView.content.anchoredPosition.x - scrollOffsetX);
+        /// <summary>
+        /// 캐릭터 선택 변경 시 호출되어 UI를 업데이트합니다.
+        /// </summary>
+        private void OnCharacterSelected(CharacterData selectedCharacter)
+        {
+            UpdateSelectedCharacterStatsDisplay();
+        }
 
-            // 위치 차이가 일정 값보다 크면 스크롤 애니메이션 실행
-            if (positionDiff > 80)
+        /// <summary>
+        /// 캐릭터 업그레이드 시 호출되어 UI 및 강조 애니메이션을 처리합니다.
+        /// </summary>
+        private void OnCharacterUpgraded(CharacterData upgradedCharacter)
+        {
+            if (CharactersController.SelectedCharacter == upgradedCharacter && upgradedCharacter != null && upgradedCharacter.IsUnlocked())
             {
-                // CubicOut 보간 함수 가져오기
-                Ease.IEasingFunction easeFunctionCubicIn = Ease.GetFunction(Ease.Type.CubicOut);
+                CharacterUpgrade currentCharacterUpgrade = upgradedCharacter.GetCurrentUpgrade();
+                if (currentCharacterUpgrade == null) return;
+                CharacterStats newStats = currentCharacterUpgrade.Stats;
+                if (newStats == null) return;
 
-                Vector2 currentPosition = scrollView.content.anchoredPosition; // 현재 스크롤 위치
-                Vector2 targetPosition = new Vector2(scrollOffsetX, 0); // 목표 스크롤 위치
+                int newLevelIndex = upgradedCharacter.GetCurrentUpgradeIndex();
+                CharacterStats oldStats = null;
 
-                float speed = positionDiff / 2500; // 스크롤 속도 계산
-
-                // Lerp를 사용하여 부드럽게 스크롤
-                for (float s = 0; s < 1.0f; s += Time.deltaTime / speed)
+                if (newLevelIndex > 0)
                 {
-                    scrollView.content.anchoredPosition = Vector2.Lerp(currentPosition, targetPosition, easeFunctionCubicIn.Interpolate(s));
+                    CharacterUpgrade prevUpgradeData = upgradedCharacter.GetUpgrade(newLevelIndex - 1);
+                    if (prevUpgradeData != null && prevUpgradeData.Stats != null)
+                    {
+                        oldStats = prevUpgradeData.Stats;
+                    }
+                }
 
-                    yield return null; // 다음 프레임까지 대기
+                UpdateSelectedCharacterStatsDisplay(); // 텍스트 먼저 업데이트
+
+                // 능력치 증가 시 강조 애니메이션 재생
+                if (oldStats == null || (newStats.Health > oldStats.Health))
+                {
+                    if (generalHealthAnimator != null) generalHealthAnimator.PlayHighlightAnimation();
+                }
+                if (oldStats == null || (newStats.MoveSpeed > oldStats.MoveSpeed))
+                {
+                    if (generalMoveSpeedAnimator != null) generalMoveSpeedAnimator.PlayHighlightAnimation();
+                }
+                if (oldStats == null || (newStats.CritChance > oldStats.CritChance))
+                {
+                    if (generalCritChanceAnimator != null) generalCritChanceAnimator.PlayHighlightAnimation();
+                }
+                if (oldStats == null || (newStats.CritMultiplier > oldStats.CritMultiplier))
+                {
+                    if (generalCritMultiplierAnimator != null) generalCritMultiplierAnimator.PlayHighlightAnimation();
+                }
+                if (generalCurrentLevelAnimator != null) // 레벨은 항상 업데이트
+                {
+                     generalCurrentLevelAnimator.PlayHighlightAnimation();
                 }
             }
         }
 
-        /// <summary>
-        /// 캐릭터 동적 애니메이션을 순차적으로 실행하는 코루틴 함수입니다.
-        /// 각 애니메이션 항목에 대해 스크롤 및 지정된 딜레이 후 애니메이션을 시작합니다.
-        /// </summary>
-        private IEnumerator DynamicAnimationCoroutine()
+        public bool IsAnyActionAvailable()
         {
-            int currentAnimationIndex = 0; // 현재 재생 중인 애니메이션 인덱스
-            CharacterDynamicAnimation tempAnimation; // 현재 애니메이션 데이터
-            WaitForSeconds delayWait = new WaitForSeconds(0.4f); // 초기 딜레이 대기 시간
-
-            yield return delayWait; // 초기 딜레이 대기
-
-            // 모든 동적 애니메이션 순회 및 실행
-            while (currentAnimationIndex < characterDynamicAnimations.Count)
+            for (int i = 0; i < itemPanels.Count; i++)
             {
-                tempAnimation = characterDynamicAnimations[currentAnimationIndex]; // 현재 애니메이션 데이터 가져오기
-
-                delayWait = new WaitForSeconds(tempAnimation.Delay); // 현재 애니메이션의 딜레이 설정
-
-                yield return StartCoroutine(ScrollCoroutine(tempAnimation.CharacterPanel)); // 해당 캐릭터 패널로 스크롤
-
-                tempAnimation.OnAnimationStarted?.Invoke(); // 애니메이션 시작 시 콜백 함수 호출
-
-                yield return delayWait; // 애니메이션 딜레이 대기
-
-                currentAnimationIndex++; // 다음 애니메이션으로 이동
+                if (itemPanels[i].IsNewCharacterOpened())
+                    return true;
+                if (itemPanels[i].IsNextUpgradeCanBePurchased())
+                    return true;
             }
-
-            yield return null; // 코루틴 종료 전 대기
-
-            isAnimationPlaying = false; // 애니메이션 재생 플래그 해제
-            isControlBlocked = false; // 컨트롤 차단 해제
-            scrollView.enabled = true; // 스크롤 뷰 활성화
+            return false;
         }
 
-        /// <summary>
-        /// 캐릭터 동적 애니메이션 목록에 새로운 애니메이션을 추가하는 함수입니다.
-        /// 우선 순위에 따라 목록의 시작 또는 끝에 추가할 수 있습니다.
-        /// </summary>
-        /// <param name="characterDynamicAnimation">추가할 캐릭터 동적 애니메이션 목록</param>
-        /// <param name="isPrioritize">true이면 목록 시작에 추가 (우선 순위 높음), false이면 목록 끝에 추가</param>
-        public void AddAnimations(List<CharacterDynamicAnimation> characterDynamicAnimation, bool isPrioritize = false)
+        protected override void EnableGamepadButtonTag()
         {
-            // 우선 순위에 따라 애니메이션 목록에 추가
+            UIGamepadButton.EnableTag(UIGamepadButtonTag.Characters);
+        }
+
+        #region Animation
+        private bool isAnimationPlaying;
+        private Coroutine animationCoroutine;
+        private static bool isControlBlocked = false;
+        public static bool IsControlBlocked => isControlBlocked;
+        private static List<CharacterDynamicAnimation> characterDynamicAnimations = new List<CharacterDynamicAnimation>();
+
+        private void ResetAnimations()
+        {
+            if (isAnimationPlaying)
+            {
+                if (animationCoroutine != null) StopCoroutine(animationCoroutine);
+                isAnimationPlaying = false;
+                animationCoroutine = null;
+            }
+            characterDynamicAnimations = new List<CharacterDynamicAnimation>();
+        }
+
+        private void StartAnimations()
+        {
+            if (isAnimationPlaying)
+                return;
+            if (!characterDynamicAnimations.IsNullOrEmpty())
+            {
+                isControlBlocked = true;
+                if (scrollView != null) scrollView.enabled = false;
+                isAnimationPlaying = true;
+                animationCoroutine = StartCoroutine(DynamicAnimationCoroutine());
+            }
+        }
+
+        private IEnumerator ScrollCoroutine(CharacterPanelUI characterPanelUI)
+        {
+            if (characterPanelUI == null || characterPanelUI.RectTransform == null || scrollView == null || scrollView.content == null) yield break;
+            float scrollOffsetX = -(characterPanelUI.RectTransform.anchoredPosition.x - SCROLL_ELEMENT_WIDTH - SCROLL_SIDE_OFFSET);
+            float positionDiff = Mathf.Abs(scrollView.content.anchoredPosition.x - scrollOffsetX);
+            if (positionDiff > 80)
+            {
+                Ease.IEasingFunction easeFunctionCubicIn = Ease.GetFunction(Ease.Type.CubicOut);
+                Vector2 currentPosition = scrollView.content.anchoredPosition;
+                Vector2 targetPosition = new Vector2(scrollOffsetX, 0);
+                float speed = Mathf.Max(0.01f, positionDiff / 2500);
+                for (float s = 0; s < 1.0f; s += Time.deltaTime / speed)
+                {
+                    if (scrollView == null || scrollView.content == null) yield break;
+                    scrollView.content.anchoredPosition = Vector2.Lerp(currentPosition, targetPosition, easeFunctionCubicIn.Interpolate(s));
+                    yield return null;
+                }
+                if (scrollView != null && scrollView.content != null) scrollView.content.anchoredPosition = targetPosition;
+            }
+        }
+
+        private IEnumerator DynamicAnimationCoroutine()
+        {
+            int currentAnimationIndex = 0;
+            CharacterDynamicAnimation tempAnimation;
+            WaitForSeconds delayWait = new WaitForSeconds(0.4f);
+            yield return delayWait;
+            while (currentAnimationIndex < characterDynamicAnimations.Count)
+            {
+                tempAnimation = characterDynamicAnimations[currentAnimationIndex];
+                if (tempAnimation == null || tempAnimation.CharacterPanel == null)
+                {
+                    currentAnimationIndex++;
+                    continue;
+                }
+                delayWait = new WaitForSeconds(tempAnimation.Delay);
+                yield return StartCoroutine(ScrollCoroutine(tempAnimation.CharacterPanel));
+                tempAnimation.OnAnimationStarted?.Invoke();
+                yield return delayWait;
+                currentAnimationIndex++;
+            }
+            yield return null;
+            isAnimationPlaying = false;
+            isControlBlocked = false;
+            if (scrollView != null) scrollView.enabled = true;
+        }
+
+        public void AddAnimations(List<CharacterDynamicAnimation> newAnimations, bool isPrioritize = false)
+        {
+            if(newAnimations.IsNullOrEmpty()) return;
             if (!isPrioritize)
             {
-                characterDynamicAnimations.AddRange(characterDynamicAnimation);
+                characterDynamicAnimations.AddRange(newAnimations);
             }
             else
             {
-                characterDynamicAnimations.InsertRange(0, characterDynamicAnimation);
+                characterDynamicAnimations.InsertRange(0, newAnimations);
             }
         }
-
         #endregion
 
         #region UI Page
-
-        /// <summary>
-        /// UI 페이지 초기화 함수입니다.
-        /// 기본 초기화 후 캐릭터 데이터베이스를 가져오고 스테이지 별 풀을 생성하며,
-        /// 각 캐릭터에 대한 패널을 생성하고 초기화합니다.
-        /// </summary>
         public override void Init()
         {
-            base.Init(); // 부모 클래스의 Init 호출
-
-            // 캐릭터 데이터베이스 가져오기
+            base.Init();
             charactersDatabase = CharactersController.GetDatabase();
-
-            // 스테이지 별 프리팹을 사용하여 오브젝트 풀 생성
-            stageStarPool = new Pool(stageStarPrefab, stageStarPrefab.name);
-
-            // 모든 캐릭터에 대해 캐릭터 패널 생성 및 초기화
-            for (int i = 0; i < charactersDatabase.Characters.Length; i++)
+            if (stageStarPrefab != null)
             {
-                var newPanel = AddNewPanel(); // 새로운 캐릭터 패널 추가
-                newPanel.Init(charactersDatabase.Characters[i], this); // 캐릭터 데이터 및 UICharactersPanel 참조와 함께 패널 초기화
+                stageStarPool = new Pool(stageStarPrefab, stageStarPrefab.name);
+            }
+            else
+            {
+                Debug.LogError("[UICharactersPanel] stageStarPrefab이 할당되지 않았습니다!");
+            }
+
+            if (charactersDatabase != null && charactersDatabase.Characters != null)
+            {
+                for (int i = 0; i < charactersDatabase.Characters.Length; i++)
+                {
+                    if (charactersDatabase.Characters[i] == null) continue;
+                    var newPanel = AddNewPanel();
+                    if (newPanel != null)
+                    {
+                        newPanel.Init(charactersDatabase.Characters[i], this);
+                    }
+                }
             }
         }
 
-        /// <summary>
-        /// 오브젝트가 파괴될 때 호출되는 함수입니다.
-        /// 생성된 오브젝트 풀을 정리합니다.
-        /// </summary>
         private void OnDestroy()
         {
-            // 스테이지 별 오브젝트 풀이 존재하면 파괴
-            if(stageStarPool != null)
+            if (stageStarPool != null)
             {
                 PoolManager.DestroyPool(stageStarPool);
+                stageStarPool = null;
             }
+            if (animationCoroutine != null)
+            {
+                StopCoroutine(animationCoroutine);
+                animationCoroutine = null;
+            }
+            // OnDisable에서 이미 처리되므로 중복될 수 있지만, 안전을 위해 남겨둘 수 있습니다.
+            // CharactersController.OnCharacterSelectedEvent -= OnCharacterSelected;
+            // CharactersController.OnCharacterUpgradedEvent -= OnCharacterUpgraded;
         }
 
-        /// <summary>
-        /// UI 페이지 표시 애니메이션을 실행하는 함수입니다.
-        /// 애니메이션을 리셋하고 기본 표시 애니메이션 및 캐릭터 동적 애니메이션을 시작합니다.
-        /// </summary>
         public override void PlayShowAnimation()
         {
-            ResetAnimations(); // 애니메이션 리셋
-
-            base.PlayShowAnimation(); // 부모 클래스의 표시 애니메이션 호출
-
-            StartAnimations(); // 캐릭터 동적 애니메이션 시작
+            ResetAnimations();
+            base.PlayShowAnimation();
+            StartAnimations();
+            UpdateSelectedCharacterStatsDisplay(); // 페이지 표시 시 능력치 업데이트
         }
 
-        /// <summary>
-        /// UI 페이지 숨김 애니메이션을 실행하는 함수입니다.
-        /// 배경 패널을 아래로 이동시키는 애니메이션을 실행하고 완료 시 페이지 닫힘 이벤트를 호출합니다.
-        /// </summary>
         public override void PlayHideAnimation()
         {
-            base.PlayHideAnimation(); // 부모 클래스의 숨김 애니메이션 호출
-
-            // 배경 패널을 아래로 이동시키는 애니메이션 시작 (CubicIn 보간)
-            backgroundPanelRectTransform.DOAnchoredPosition(new Vector2(0, -1500), 0.3f).SetEasing(Ease.Type.CubicIn).OnComplete(delegate
+            base.PlayHideAnimation();
+            if (backgroundPanelRectTransform != null)
             {
-                // UI 컨트롤러에 페이지 닫힘 이벤트 알림
-                UIController.OnPageClosed(this);
-            });
+                 backgroundPanelRectTransform.DOAnchoredPosition(new Vector2(0, -1500), 0.3f).SetEasing(Ease.Type.CubicIn).OnComplete(delegate
+                {
+                    // CS0117 오류를 피하기 위해 UIController.IsInitialized 확인 제거
+                    UIController.OnPageClosed(this);
+                });
+            }
+            else
+            {
+                 // CS0117 오류를 피하기 위해 UIController.IsInitialized 확인 제거
+                 UIController.OnPageClosed(this);
+            }
         }
 
-        /// <summary>
-        /// UI 페이지를 숨기는 함수입니다.
-        /// UIController를 통해 이 페이지를 숨깁니다.
-        /// </summary>
-        /// <param name="onFinish">숨김 애니메이션 완료 시 호출될 콜백 함수</param>
         protected override void HidePage(SimpleCallback onFinish)
         {
-            // UIController를 사용하여 UICharactersPanel 페이지 숨김
+            // CS0117 오류를 피하기 위해 UIController.IsInitialized 확인 제거
             UIController.HidePage<UICharactersPanel>(onFinish);
+            // 만약 UIController가 초기화되지 않은 상태에서 onFinish 콜백이 중요하다면,
+            // else { onFinish?.Invoke(); } 와 같은 처리를 고려할 수 있으나,
+            // 원본 코드의 직접 호출 방식을 따릅니다.
         }
 
-        /// <summary>
-        /// 특정 캐릭터 데이터에 해당하는 캐릭터 패널 UI를 가져오는 함수입니다.
-        /// </summary>
-        /// <param name="character">찾으려는 캐릭터 데이터</param>
-        /// <returns>해당 캐릭터 데이터와 일치하는 CharacterPanelUI 객체, 없으면 null 반환</returns>
         public override CharacterPanelUI GetPanel(CharacterData character)
         {
-            // 모든 아이템 패널을 순회하며 해당 캐릭터 데이터와 일치하는 패널 찾기
+            if (character == null || itemPanels.IsNullOrEmpty()) return null;
             for (int i = 0; i < itemPanels.Count; i++)
             {
-                if (itemPanels[i].Character == character)
-                    return itemPanels[i]; // 일치하는 패널 찾으면 반환
+                if (itemPanels[i] != null && itemPanels[i].Character == character)
+                    return itemPanels[i];
             }
-
-            return null; // 일치하는 패널이 없으면 null 반환
+            return null;
         }
-
         #endregion
     }
 }

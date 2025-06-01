@@ -30,6 +30,11 @@ namespace Watermelon
         [Tooltip("권장 전투력 정보를 표시하는 TextMeshProUGUI 컴포넌트입니다.")]
         [SerializeField] private TextMeshProUGUI recomendedPowerText;
 
+        // ▼▼▼▼▼ 추가할 변수 ▼▼▼▼▼
+        [Tooltip("현재 스테이지의 계산된 난이도 등급(예: EAZY)을 표시할 TextMeshProUGUI 컴포넌트입니다.")]
+        [SerializeField] private TextMeshProUGUI difficultyNoteText;
+        // ▲▲▲▲▲ 추가 완료 ▲▲▲▲▲
+
         [Space]
         [Tooltip("설정 메뉴를 여는 버튼입니다.")]
         [SerializeField] private Button settingsButton;
@@ -152,6 +157,10 @@ namespace Watermelon
         {
             // 인앱 구매 완료 이벤트 구독
             IAPManager.OnPurchaseComplete += OnPurchaseComplete;
+
+            // ▼▼▼▼▼ 추가할 코드 ▼▼▼▼▼
+            BalanceController.BalanceUpdated += OnBalanceSystemUpdated; // 이벤트 구독
+            // ▲▲▲▲▲ 추가 완료 ▲▲▲▲▲
         }
 
         /// <summary>
@@ -162,7 +171,21 @@ namespace Watermelon
         {
             // 인앱 구매 완료 이벤트 구독 해제
             IAPManager.OnPurchaseComplete -= OnPurchaseComplete;
+
+            // ▼▼▼▼▼ 추가할 코드 ▼▼▼▼▼
+            BalanceController.BalanceUpdated -= OnBalanceSystemUpdated; // 이벤트 구독 해제
+            // ▲▲▲▲▲ 추가 완료 ▲▲▲▲▲
         }
+
+        // ▼▼▼▼▼ 추가할 이벤트 핸들러 함수 ▼▼▼▼▼
+        /// <summary>
+        /// BalanceController의 난이도 정보가 업데이트될 때 호출되는 콜백 함수입니다.
+        /// </summary>
+        private void OnBalanceSystemUpdated(bool highlight) // BalanceUpdated 이벤트 시그니처와 일치
+        {
+            UpdateDifficultyNoteText();
+        }
+        // ▲▲▲▲▲ 추가 완료 ▲▲▲▲▲
 
         /// <summary>
         /// 레벨 정보(현재 구역 및 권장 전투력) 텍스트를 업데이트하는 함수입니다.
@@ -194,7 +217,8 @@ namespace Watermelon
 
             // 하단 패널 등장 애니메이션 (CubicOut 보간)
             bottomPanelRectTransform.anchoredPosition = new Vector2(0, -500); // 초기 위치 설정
-            bottomPanelRectTransform.DOAnchoredPosition(Vector2.zero, 0.3f).SetEasing(Ease.Type.CubicOut).OnComplete(() => {
+            bottomPanelRectTransform.DOAnchoredPosition(Vector2.zero, 0.3f).SetEasing(Ease.Type.CubicOut).OnComplete(() =>
+            {
                 UIController.OnPageOpened(this); // UI 컨트롤러에 페이지 열림 이벤트 알림
 
                 UIGamepadButton.EnableTag(UIGamepadButtonTag.MainMenu); // 메인 메뉴 관련 게임패드 버튼 태그 활성화
@@ -220,6 +244,10 @@ namespace Watermelon
             UpdateLevelText(); // 레벨 정보 텍스트 업데이트
 
             ExperienceController.ApplyExperience(); // 경험치 적용 (UI 업데이트 포함)
+
+            // ▼▼▼▼▼ 추가할 호출 ▼▼▼▼▼
+            UpdateDifficultyNoteText(); // 난이도 등급 텍스트 업데이트
+            // ▲▲▲▲▲ 추가 완료 ▲▲▲▲▲
         }
 
         /// <summary>
@@ -262,6 +290,25 @@ namespace Watermelon
                 AdsManager.DisableForcedAd(); // 강제 광고 비활성화
             }
         }
+
+        // ▼▼▼▼▼ 추가할 함수 ▼▼▼▼▼
+        /// <summary>
+        /// 현재 스테이지의 난이도 등급 텍스트를 업데이트합니다.
+        /// </summary>
+        private void UpdateDifficultyNoteText()
+        {
+            if (difficultyNoteText != null && BalanceController.CurrentDifficulty != null)
+            {
+                // 예시: "(EASY)" 형태로 표시 (이미지의 "EAZY"는 Note 값을 대문자화 한 것으로 보임)
+                difficultyNoteText.text = $"({BalanceController.CurrentDifficulty.Note.ToUpper()})";
+            }
+            else if (difficultyNoteText != null)
+            {
+                // 난이도 정보가 없으면 텍스트를 비웁니다.
+                difficultyNoteText.text = "";
+            }
+        }
+        // ▲▲▲▲▲ 추가 완료 ▲▲▲▲▲
 
         #region Buttons
         /// <summary>

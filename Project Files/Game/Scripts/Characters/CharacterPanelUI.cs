@@ -18,6 +18,7 @@ namespace Watermelon.SquadShooter
     // 캐릭터 UI 패널 클래스 정의, UIUpgradeAbstractPanel 상속
     public class CharacterPanelUI : UIUpgradeAbstractPanel
     {
+        
         // 상수 정의
         private const string LOCKED_NAME = "???"; // 잠긴 캐릭터 이름
         private const string UPGRADE_TEXT = "UPGRADE"; // 업그레이드 버튼 텍스트
