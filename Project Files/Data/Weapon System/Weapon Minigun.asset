@@ -34,13 +34,13 @@ MonoBehaviour:
     spread: 5
     power: 9
     bulletsPerShot:
-      firstValue: 3
+      firstValue: 1
       secondValue: 1
     bulletSpeed:
       firstValue: 23.4375
       secondValue: 23.4375
     keyUpgradeNumber: 0
-  - price: 0
+  - price: 50
     currencyType: 0
     previewSprite: {fileID: 0}
     weaponPrefab: {fileID: 6347890837037930244, guid: 60d8b7dff4bbbbc4db793104d2c025a1,
@@ -55,7 +55,7 @@ MonoBehaviour:
     spread: 5
     power: 9
     bulletsPerShot:
-      firstValue: 4
+      firstValue: 1
       secondValue: 1
     bulletSpeed:
       firstValue: 23.4375

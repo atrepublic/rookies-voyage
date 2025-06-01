@@ -99,6 +99,10 @@ namespace Watermelon
         /// <param name="loadingScene">로딩 씬을 사용할지 여부 (true: 사용, false: 사용 안 함)</param>
         public void LoadGame(bool loadingScene)
         {
+
+            Debug.Log("[Initializer] LoadGame 호출됨. PoolManager의 모든 풀을 정리합니다.");
+            PoolManager.ClearAllPools(); // ◀◀◀ 여기에 PoolManager 정리 로직 추가
+            
             // 로딩 씬 사용 여부에 따라 다른 로딩 함수를 호출합니다.
             if (loadingScene)
             {

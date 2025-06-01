@@ -22,6 +22,15 @@ namespace Watermelon
         /// </summary>
         public void AddTween(TweenCase tweenCase)
         {
+            // ▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼ [ 수정된 부분 ] ▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼
+            if (tweenCase == null)
+            {
+                // null인 TweenCase는 추가하지 않거나, 경고 로그를 남길 수 있습니다.
+                // Debug.LogWarning("[TweenCaseCollection] AddTween: 추가하려는 tweenCase가 null입니다.");
+                return; // null이면 메서드 종료
+            }
+            // ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲ [ 수정 완료 ] ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲
+
             tweenCase.OnComplete(OnTweenCaseComplete);
             tweenCases.Add(tweenCase);
         }
@@ -31,9 +40,14 @@ namespace Watermelon
         /// </summary>
         public bool IsComplete()
         {
-            foreach (var tweenCase in tweenCases)
+            // tweenCases 리스트가 null이 아니고, 모든 요소가 null이 아니며 완료되었는지 확인
+            if (tweenCases == null) return true; // 리스트 자체가 없으면 완료된 것으로 간주 (상황에 따라 다를 수 있음)
+
+            for (int i = 0; i < tweenCases.Count; i++)
             {
-                if (!tweenCase.IsCompleted)
+                var tc = tweenCases[i];
+                // 리스트에 null인 tweenCase가 추가되었을 가능성을 방지 (위의 AddTween 수정으로 실제로는 발생하지 않을 것으로 예상)
+                if (tc != null && !tc.IsCompleted)
                     return false;
             }
             return true;
@@ -44,9 +58,10 @@ namespace Watermelon
         /// </summary>
         public void Complete()
         {
+            if (tweenCases == null) return;
             foreach (var tweenCase in tweenCases)
             {
-                tweenCase.Complete();
+                tweenCase?.Complete(); // null 체크 추가
             }
         }
 
@@ -55,9 +70,10 @@ namespace Watermelon
         /// </summary>
         public void Kill()
         {
+            if (tweenCases == null) return;
             foreach (var tweenCase in tweenCases)
             {
-                tweenCase.Kill();
+                tweenCase?.Kill(); // null 체크 추가
             }
         }
 
@@ -74,9 +90,16 @@ namespace Watermelon
         /// </summary>
         private void OnTweenCaseComplete()
         {
+            if (tweenCases == null) // tweenCases가 null일 경우를 대비
+            {
+                tweensCompleted?.Invoke();
+                return;
+            }
+
             foreach (var tweenCase in tweenCases)
             {
-                if (!tweenCase.IsCompleted)
+                // 리스트에 null인 tweenCase가 추가되었을 가능성을 방지
+                if (tweenCase != null && !tweenCase.IsCompleted)
                     return;
             }
             tweensCompleted?.Invoke();
@@ -88,7 +111,21 @@ namespace Watermelon
         public static TweenCaseCollection operator +(TweenCaseCollection caseCollection, TweenCase tweenCase)
         {
             if (caseCollection == null)
+            {
+                // Debug.LogWarning("[TweenCaseCollection] operator+: caseCollection이 null이므로 새로 생성합니다.");
                 caseCollection = new TweenCaseCollection();
+            }
+
+            // ▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼ [ 수정된 부분 ] ▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼
+            // AddTween 내부에서 null 체크를 하므로, 여기서 tweenCase가 null이어도 AddTween이 처리합니다.
+            // 만약 tweenCase가 null일 때 caseCollection 자체를 반환하지 않으려면 여기서도 체크 가능합니다.
+            if (tweenCase == null)
+            {
+                // Debug.LogWarning("[TweenCaseCollection] operator+: 추가하려는 tweenCase가 null이므로 컬렉션에 추가하지 않습니다.");
+                return caseCollection; // null tween은 추가하지 않고 기존 컬렉션 반환
+            }
+            // ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲ [ 수정 완료 ] ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲
+            
             caseCollection.AddTween(tweenCase);
             return caseCollection;
         }

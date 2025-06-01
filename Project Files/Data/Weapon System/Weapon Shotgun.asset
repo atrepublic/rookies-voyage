@@ -73,11 +73,11 @@ MonoBehaviour:
       secondValue: 30
     rangeRadius: 16.25
     fireRate: 0.85
-    spread: 60
+    spread: 30
     power: 33
     bulletsPerShot:
-      firstValue: 5
-      secondValue: 8
+      firstValue: 3
+      secondValue: 6
     bulletSpeed:
       firstValue: 18.75
       secondValue: 28.125

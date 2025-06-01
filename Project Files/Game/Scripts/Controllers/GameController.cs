@@ -72,7 +72,16 @@ namespace Watermelon
             // 튜토리얼·파티클·플로팅 텍스트 초기화
             tutorialController.Init();
             particlesController.Init();
-            floatingTextController.Init();
+            //floatingTextController.Init();
+            if (gameSettings.FloatingTextPresets != null)
+                {
+                    floatingTextController.Init(gameSettings.FloatingTextPresets); // ✅ 수정된 호출
+                }
+                else
+                {
+                    Debug.LogWarning("[GameController] Awake: GameSettings에 FloatingTextPresets가 설정되지 않았습니다. FloatingTextController가 비어있는 상태로 초기화될 수 있습니다.");
+                    floatingTextController.Init(new FloatingTextController.FloatingTextCase[0]); // 빈 배열로라도 초기화
+                }
 
             // 레벨 오브젝트 생성
             LevelController.CreateLevelObject();

@@ -219,5 +219,31 @@ namespace Watermelon
             poolsList.Clear(); // 풀 리스트 비우기
             poolsDictionary.Clear(); // 풀 딕셔너리 비우기
         }
+
+        public static void ClearAllPools()
+        {
+            if (poolsList != null) // null 체크 추가
+            {
+                // 주의: 리스트를 순회하면서 제거하면 문제가 발생할 수 있으므로,
+                // 뒤에서부터 제거하거나, 복사본을 사용하거나, DestroyPool이 내부적으로 안전하게 처리하는지 확인 필요.
+                // DestroyPool이 poolsList와 poolsDictionary에서 해당 풀을 제거한다고 가정.
+                for (int i = poolsList.Count - 1; i >= 0; i--)
+                {
+                    if (poolsList[i] != null) // 풀 자체가 null이 아닌지 확인
+                    {
+                        DestroyPool(poolsList[i]);
+                    }
+                }
+                // DestroyPool에서 이미 제거하므로 아래 Clear는 필요 없을 수 있지만, 만약을 위해 추가
+                poolsList.Clear();
+                poolsDictionary.Clear(); 
+            }
+            else // poolsList가 null인 비정상적인 경우 대비
+            {
+                poolsList = new List<IPool>();
+                poolsDictionary = new Dictionary<int, IPool>();
+            }
+            Debug.Log("[PoolManager] 모든 풀이 정리되었습니다.");
+        }
     }
 }

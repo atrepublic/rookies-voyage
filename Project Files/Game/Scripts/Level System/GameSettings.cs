@@ -99,6 +99,12 @@ namespace Watermelon.LevelSystem
         private Sprite defaultWorldSprite;
         public Sprite DefaultWorldSprite => defaultWorldSprite;
 
+        [LineSpacer("UI Settings")] // 예시: 새로운 섹션 구분
+        [SerializeField]
+        [Tooltip("플로팅 텍스트 프리셋 배열입니다.")]
+        private FloatingTextController.FloatingTextCase[] floatingTextPresets; // ◀◀◀ 이 필드 추가
+        public FloatingTextController.FloatingTextCase[] FloatingTextPresets => floatingTextPresets;
+
         [LineSpacer("Rewarded Video")] // 에디터에서 시각적인 구분을 위한 커스텀 속성 (가정)
         [SerializeField]
         [Tooltip("부활에 필요한 재화 가격")] // revivePrice 변수에 대한 툴팁

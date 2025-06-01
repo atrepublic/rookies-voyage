@@ -1,28 +1,26 @@
+// TeslaBulletBehavior.cs
 // 이 스크립트는 테슬라 투사체의 동작을 정의합니다.
 // 플레이어 투사체 기본 동작을 상속받으며, 여러 적에게 연쇄적으로 피해를 입히는 기능을 추가합니다.
-using System.Collections.Generic; // List 사용을 위해 필요합니다.
-using System.Linq; // Linq (OrderBy, ToList) 사용을 위해 필요합니다.
+// PlayerBulletBehavior의 변경된 Init 시그니처를 따르도록 수정되었습니다.
+using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
-using Watermelon.LevelSystem; // ActiveRoom 사용을 위해 필요합니다.
-// DOTween 등 필요한 네임스페이스가 있다면 여기에 추가하세요. (예: using DG.Tweening;)
+using Watermelon; // Tween, ParticlesController 등 Watermelon 프레임워크 사용
+using Watermelon.LevelSystem; // ActiveRoom 사용
 
 namespace Watermelon.SquadShooter
 {
-    // PlayerBulletBehavior를 상속받아 플레이어 투사체의 기본 기능을 활용합니다.
     public class TeslaBulletBehavior : PlayerBulletBehavior
     {
-        // 적 명중 시 재생할 파티클 시스템 해시 값입니다.
         private static readonly int PARTICLE_HIT_HASH = "Tesla Hit".GetHashCode();
-        // 벽 명중 시 재생할 파티클 시스템 해시 값입니다.
         private static readonly int PARTICLE_WALL_HIT_HASH = "Tesla Wall Hit".GetHashCode();
 
-        [Space(5f)] // 인스펙터에 5f 간격을 추가합니다.
+        [Space(5f)]
         [Tooltip("투사체 이동 경로를 시각적으로 표시하는 트레일 렌더러 컴포넌트입니다.")]
         [SerializeField] TrailRenderer trailRenderer;
 
         // 투사체가 연쇄적으로 공격할 적 대상 목록입니다.
         private List<BaseEnemyBehavior> targets;
-
         // 투사체가 총 몇 명의 적을 명중시켜야 하는지의 목표치입니다.
         private int targetsHitGoal;
         // 투사체가 현재까지 몇 명의 적을 명중시켰는지의 카운트입니다.
@@ -30,45 +28,57 @@ namespace Watermelon.SquadShooter
 
         /// <summary>
         /// 테슬라 투사체를 초기화합니다.
-        /// 기본 투사체 정보 설정 후 트레일 렌더러를 초기화하고 크기 애니메이션을 시작하며, 공격할 적 대상 목록을 설정합니다.
         /// </summary>
-        /// <param name="damage">투사체의 초기 데미지 값</param>
-        /// <param name="speed">투사체의 이동 속도</param>
-        /// <param name="currentTarget">투사체의 초기 목표 적 (주로 첫 번째 대상)</param>
-        /// <param name="autoDisableTime">자동 비활성화 시간</param>
-        /// <param name="autoDisableOnHit">충돌 시 자동 비활성화 여부</param>
-        public override void Init(float damage, float speed, BaseEnemyBehavior currentTarget, float autoDisableTime, bool autoDisableOnHit)
+        /// <param name="baseDamageFromGun">총기에서 계산된 초기 데미지 값</param>
+        /// <param name="bulletSpeed">투사체의 이동 속도</param>
+        /// <param name="initialTargetForProjectile">투사체의 초기 목표 적</param>
+        /// <param name="projectileAutoDisableTime">투사체가 자동으로 비활성화될 시간</param>
+        /// <param name="projectileDisableOnHit">직접 충돌 시 투사체를 비활성화할지 여부</param>
+        /// <param name="gunShotWasCritical">총구 발사 시점의 치명타 여부</param>
+        /// <param name="projectileOwner">이 투사체를 발사한 캐릭터의 CharacterBehaviour</param>
+        public override void Init(float baseDamageFromGun, float bulletSpeed, BaseEnemyBehavior initialTargetForProjectile, float projectileAutoDisableTime, bool projectileDisableOnHit, bool gunShotWasCritical, CharacterBehaviour projectileOwner)
         {
-            // 상위 클래스의 Init 함수를 호출하여 기본 투사체 속성을 설정합니다.
-            base.Init(damage, speed, currentTarget, autoDisableTime, autoDisableOnHit);
+            // PlayerBulletBehavior의 Init 호출 (변경된 시그니처에 맞게 모든 인자 전달)
+            base.Init(baseDamageFromGun, bulletSpeed, initialTargetForProjectile, projectileAutoDisableTime, projectileDisableOnHit, gunShotWasCritical, projectileOwner);
 
             if (trailRenderer == null) {
-                Debug.LogError($"[테슬라 총알 초기화] ID: {this.gameObject.GetInstanceID()} - 트레일 렌더러가 할당되지 않았습니다!");
+                Debug.LogError($"[TeslaBulletBehavior] Init ({this.gameObject.name}): 트레일 렌더러가 할당되지 않았습니다!");
             } else {
-                 trailRenderer.Clear();
+                 trailRenderer.Clear(); // 재사용 시 이전 트레일 제거
             }
 
-            // 투사체의 초기 스케일을 작게 설정하고, 짧은 시간 동안 원래 크기로 커지는 애니메이션을 실행합니다.
+            // 투사체 크기 애니메이션 (DOTween 사용 가정)
             transform.localScale = Vector3.one * 0.1f;
-            // DOTween 사용 시, 해당 네임스페이스(DG.Tweening)를 using 해야 합니다.
-            transform.DOScale(1.0f, 0.25f).SetEasing(Ease.Type.CubicIn);
+            transform.DOScale(1.0f, 0.25f).SetEasing(Ease.Type.CubicIn); // DOTween 확장 메서드
 
-            // 명중 횟수 카운트를 0으로 초기화합니다.
-            hitsPerformed = 0;
+            hitsPerformed = 0; // 명중 횟수 초기화
 
-            // CharacterBehaviour.GetBehaviour() 및 그 transform이 null이 아닌지 확인합니다.
-            CharacterBehaviour currentCharacterBehaviour = CharacterBehaviour.GetBehaviour();
-            if (currentCharacterBehaviour != null && currentCharacterBehaviour.transform != null) {
-                targets = ActiveRoom.GetAliveEnemies().OrderBy(e => Vector3.SqrMagnitude(e.transform.position - currentCharacterBehaviour.transform.position)).ToList();
-                Debug.Log($"[테슬라 총알 초기화] ID: {this.gameObject.GetInstanceID()}, 타겟 목록 개수: {(targets != null ? targets.Count : 0)}");
-            } else {
-                Debug.LogError($"[테슬라 총알 초기화] ID: {this.gameObject.GetInstanceID()} - CharacterBehaviour 또는 그 Transform을 찾을 수 없어 타겟 목록을 초기화할 수 없습니다.");
+            // 연쇄 공격 대상 목록 설정
+            // ownerCharacterBehaviour는 base.Init에서 설정됨
+            if (this.ownerCharacterBehaviour != null && this.ownerCharacterBehaviour.transform != null)
+            {
+                // 현재 활성화된 방의 살아있는 적들을 가져와 캐릭터로부터 가까운 순으로 정렬
+                targets = ActiveRoom.GetAliveEnemies()
+                    .Where(e => e != null && e.gameObject.activeInHierarchy && !e.IsDead) // 유효한 타겟만 필터링
+                    .OrderBy(e => Vector3.SqrMagnitude(e.transform.position - this.ownerCharacterBehaviour.transform.position))
+                    .ToList();
+                
+                // 첫 번째 타겟(initialTargetForProjectile)은 이미 공격 대상이므로, targets 리스트에서 제외할 수 있음 (선택적)
+                if (initialTargetForProjectile != null && targets.Contains(initialTargetForProjectile))
+                {
+                    targets.Remove(initialTargetForProjectile);
+                }
+                // Debug.Log($"[TeslaBulletBehavior] Init ({this.gameObject.name}): 초기 연쇄 타겟 목록 개수: {(targets != null ? targets.Count : 0)}");
+            }
+            else
+            {
+                Debug.LogError($"[TeslaBulletBehavior] Init ({this.gameObject.name}): CharacterBehaviourOwner를 찾을 수 없어 타겟 목록을 초기화할 수 없습니다.");
                 targets = new List<BaseEnemyBehavior>(); // 오류 방지를 위해 빈 리스트로 초기화
             }
         }
 
         /// <summary>
-        /// 투사체가 명중시켜야 할 총 적 대상 목표치를 설정합니다.
+        /// 투사체가 명중시켜야 할 총 적 대상 목표치(연쇄 횟수)를 설정합니다.
         /// </summary>
         /// <param name="goal">명중 목표 수</param>
         public void SetTargetsHitGoal(int goal)
@@ -77,168 +87,118 @@ namespace Watermelon.SquadShooter
         }
 
         /// <summary>
-        /// 물리 업데이트 동안 호출되며 투사체의 이동 및 대상 추적을 처리합니다.
+        /// 물리 업데이트 동안 호출되며 투사체의 이동 및 다음 대상 추적을 처리합니다.
         /// </summary>
         protected override void FixedUpdate()
         {
-            // 공격할 대상 목록이 null이거나 비어있으면 투사체를 비활성화합니다.
-            if (targets == null || targets.Count == 0)
+            // 이미 비활성화되었거나, 발사자 정보가 없으면 아무것도 하지 않음
+            if (!gameObject.activeSelf || ownerCharacterBehaviour == null)
             {
+                return;
+            }
+
+            // Case 1: 첫 번째 타격이 아직 수행되지 않았고 (hitsPerformed == 0), 
+            //         PlayerBulletBehavior에 의해 설정된 초기 목표(this.initialTarget)가 유효한 경우
+            if (hitsPerformed == 0 && this.initialTarget != null && this.initialTarget.gameObject.activeInHierarchy && !this.initialTarget.IsDead)
+            {
+                // 목표를 향해 회전
+                Vector3 targetPosition = this.initialTarget.transform.position;
+                Vector3 targetDirection = targetPosition.SetY(transform.position.y) - transform.position;
+                if (targetDirection.sqrMagnitude > 0.001f)
+                {
+                    transform.rotation = Quaternion.LookRotation(targetDirection.normalized);
+                }
+                base.FixedUpdate(); // PlayerBulletBehavior의 이동 로직 사용
+                return; // 첫 타격 발생 (OnTriggerEnter -> OnEnemyHitted 호출) 전까지는 아래 연쇄 로직 실행 안 함
+            }
+
+            // Case 2: 첫 번째 타격이 이미 발생했거나 (hitsPerformed > 0), 또는 어떤 이유로든 초기 목표가 없는 경우,
+            //         이제 연쇄 공격 로직을 따릅니다.
+            if (targets == null || targets.Count == 0 || hitsPerformed >= targetsHitGoal)
+            {
+                // 연쇄할 타겟이 없거나, 목표 연쇄 횟수를 달성했으면 비활성화
                 DisableBullet();
                 return;
             }
 
-            // 목표 명중 횟수를 달성했으면 투사체를 비활성화합니다.
-            if (hitsPerformed >= targetsHitGoal)
+            // 다음 연쇄 타겟 유효성 검사
+            BaseEnemyBehavior currentChainTarget = targets[0];
+            if (currentChainTarget == null || !currentChainTarget.gameObject.activeInHierarchy || currentChainTarget.IsDead)
             {
-                DisableBullet();
+                targets.RemoveAt(0);
+                // FixedUpdate가 다음 프레임에 다시 이 부분을 평가하도록 여기서 return
                 return;
             }
-            
-            // 현재 목표 대상(targets[0])이 null이거나 게임 오브젝트가 비활성화된 경우 처리합니다.
-            if (targets[0] == null || !targets[0].gameObject.activeInHierarchy)
+
+            // 다음 연쇄 대상을 PlayerBulletBehavior의 initialTarget 필드에도 반영하여
+            // base.FixedUpdate()가 올바르게 해당 타겟을 향해 이동하도록 함
+            this.initialTarget = currentChainTarget;
+            Vector3 nextTargetPosition = currentChainTarget.transform.position;
+            Vector3 nextTargetDirection = nextTargetPosition.SetY(transform.position.y) - transform.position;
+
+            if (nextTargetDirection.sqrMagnitude > 0.001f)
             {
-                Debug.LogWarning($"[테슬라 총알 FixedUpdate] ID: {this.gameObject.GetInstanceID()} - 현재 타겟(targets[0])이 null이거나 비활성화되어 리스트에서 제거합니다.");
-                targets.RemoveAt(0);
-                // 제거 후 targets 리스트가 비었는지 다시 확인하고 비었으면 투사체를 비활성화합니다.
-                if (targets.Count == 0)
-                {
-                    DisableBullet();
-                }
-                return; // 다음 FixedUpdate에서 새로운 targets[0]으로 처리하도록 합니다.
+                transform.rotation = Quaternion.LookRotation(nextTargetDirection.normalized);
             }
-
-            // 현재 목표 대상의 위치를 향하는 방향 벡터를 계산합니다 (Y축 위치는 1f로 고정).
-            Vector3 targetPosition = targets[0].transform.position;
-            Vector3 targetDirection = targetPosition.SetY(1f) - transform.position;
-
-            // 목표 방향 벡터의 크기가 매우 작지 않은 경우 (오류 방지), 투사체를 회전시킵니다.
-            if (targetDirection.sqrMagnitude > 0.001f) 
-            {
-                // Squad Shooter 원본 방식 (거의 즉시 회전)
-                Vector3 rotationDirection = Vector3.RotateTowards(transform.forward, targetDirection, 360f, 0f); 
-                transform.rotation = Quaternion.LookRotation(rotationDirection);
-            }
-
-            // 상위 클래스의 FixedUpdate 함수를 호출하여 속도에 따라 투사체를 앞 방향으로 이동시킵니다.
-            base.FixedUpdate();
-
-            // 현재 목표 대상이 죽었는지 확인하고, 죽었다면 대상 목록에서 제거합니다.
-            // targets 리스트가 비어있지 않고, targets[0]이 null이 아닌지 먼저 확인합니다.
-            if (targets.Count > 0 && targets[0] != null && targets[0].IsDead)
-            {
-                Debug.Log($"[테슬라 총알 FixedUpdate] ID: {this.gameObject.GetInstanceID()} - 현재 타겟 {targets[0].gameObject.name}이(가) 사망하여 리스트에서 제거합니다.");
-                targets.RemoveAt(0);
-                // 제거 후 targets 리스트가 비었는지 다시 확인하고 비었으면 투사체를 비활성화합니다.
-                if (targets.Count == 0)
-                {
-                    DisableBullet(); 
-                }
-            }
+            base.FixedUpdate(); // PlayerBulletBehavior의 이동 로직 사용
         }
 
         /// <summary>
-        /// 적에게 명중했을 때 호출됩니다.
-        /// 특정 명중 파티클을 재생하고 트레일 렌더러를 초기화하며, 대상 목록을 업데이트하고 명중 횟수 및 데미지를 조정합니다.
+        /// 적에게 명중했을 때 호출됩니다. (PlayerBulletBehavior.OnTriggerEnter 내부에서 호출됨)
+        /// 연쇄 공격 로직을 처리합니다: 명중 횟수 증가, 데미지 감소, 다음 타겟 설정 등.
+        /// 플로팅 텍스트는 PlayerBulletBehavior.OnTriggerEnter에서 각 타격 시 생성됩니다.
         /// </summary>
-        /// <param name="baseEnemyBehavior">명중한 적 객체</param>
-        protected override void OnEnemyHitted(BaseEnemyBehavior baseEnemyBehavior)
+        /// <param name="enemyHitByThisBullet">이번에 명중한 적 객체</param>
+        protected override void OnEnemyHitted(BaseEnemyBehavior enemyHitByThisBullet)
         {
-            string bulletInstanceID = this.gameObject.GetInstanceID().ToString();
-            Debug.Log($"[테슬라 총알 명중] ID: {bulletInstanceID} - 대상: {baseEnemyBehavior.gameObject.name} (ID: {baseEnemyBehavior.GetInstanceID()}), 현재 명중 횟수: {hitsPerformed}");
+            // Debug.Log($"[TeslaBulletBehavior] OnEnemyHitted ({this.gameObject.name}) - 대상: {enemyHitByThisBullet.gameObject.name}, 현재 명중 횟수(증가 전): {hitsPerformed}");
             
-            if (targets == null) {
-                 Debug.LogError($"[테슬라 총알 명중] ID: {bulletInstanceID} - Targets 리스트가 null입니다! 비정상 상황. 투사체를 비활성화합니다.");
-                 DisableBullet();
-                 return;
-            }
-
-            Debug.Log($"[테슬라 총알 명중] ID: {bulletInstanceID} - 타겟 제거 전 리스트 (개수: {targets.Count}):");
-            for(int j=0; j < targets.Count; j++) // 필요시 타겟 상세 로깅
-            {
-                if (targets[j] != null)
-                    Debug.Log($"  - 타겟[{j}]: {targets[j].gameObject.name} (ID: {targets[j].GetInstanceID()}), 사망 여부: {targets[j].IsDead}");
-                else
-                    Debug.Log($"  - 타겟[{j}]: NULL");
-            }
-
-            // ParticlesController.IsInitialised 체크 제거
             ParticlesController.PlayParticle(PARTICLE_HIT_HASH).SetPosition(transform.position);
+            if (trailRenderer != null) trailRenderer.Clear(); // 다음 타겟으로 이동 전 트레일 초기화
 
-            if (trailRenderer != null) trailRenderer.Clear();
-
-            // Squad Shooter 버전과 유사한 방식의 제거 루프로 변경
-            bool removedThisEnemy = false;
-            for (int i = 0; i < targets.Count; i++)
+            // 명중한 적(enemyHitByThisBullet)을 targets 리스트에서 제거 (이미 죽었거나, 방금 명중했으므로)
+            // 그리고 이미 죽은 다른 타겟들도 정리
+            if (targets != null)
             {
-                if (targets[i] == null) { 
-                    Debug.LogWarning($"[테슬라 총알 명중] ID: {bulletInstanceID} - 제거 루프 중 타겟[{i}]이 null입니다. 안전하게 제거합니다.");
-                    targets.RemoveAt(i);
-                    i--;
-                    continue;
-                }
-
-                if (targets[i].IsDead || targets[i] == baseEnemyBehavior) // 참조(==) 비교 사용
-                {
-                    Debug.Log($"[테슬라 총알 명중] ID: {bulletInstanceID} - 제거 대상: {targets[i].gameObject.name} (사망: {targets[i].IsDead}, 명중타겟과 동일: {targets[i] == baseEnemyBehavior})");
-                    if (targets[i] == baseEnemyBehavior) {
-                        removedThisEnemy = true;
-                    }
-                    targets.RemoveAt(i);
-                    i--; 
-                }
-            }
-
-            if (removedThisEnemy) {
-                Debug.Log($"[테슬라 총알 명중] ID: {bulletInstanceID} - 명중한 적 ({baseEnemyBehavior.gameObject.name})을 타겟 리스트에서 성공적으로 제거했습니다 (Squad Shooter 방식).");
+                targets.RemoveAll(t => t == null || t.IsDead || t == enemyHitByThisBullet);
             } else {
-                Debug.LogWarning($"[테슬라 총알 명중] ID: {bulletInstanceID} - 경고: 명중한 적 ({baseEnemyBehavior.gameObject.name})이 타겟 리스트에 없었거나 제거되지 않았습니다 (Squad Shooter 방식). '누적' 현상 유발 가능.");
+                targets = new List<BaseEnemyBehavior>(); // targets가 null인 예외 상황 방어
             }
             
-            Debug.Log($"[테슬라 총알 명중] ID: {bulletInstanceID} - 타겟 최종 정리 후 리스트 (개수: {targets.Count}):");
-            // 필요시 최종 타겟 상세 로깅
+            hitsPerformed++; // 실제 명중 횟수 증가
+            // Debug.Log($"[TeslaBulletBehavior] OnEnemyHitted ({this.gameObject.name}) - 명중 횟수 증가 후: {hitsPerformed}");
 
-            hitsPerformed++;
-            Debug.Log($"[테슬라 총알 명중] ID: {bulletInstanceID} - 명중 횟수 증가: {hitsPerformed}");
-
-            if (hitsPerformed == 1) 
+            // 첫 번째 연쇄 공격(즉, 두 번째 타격부터) 데미지 감소 적용
+            if (hitsPerformed == 1) // hitsPerformed는 0에서 시작하여 첫 타격 후 1이 됨. 즉, 이것이 첫 '연쇄' 시작점.
             {
-                damage *= 0.3f; 
-                Debug.Log($"[테슬라 총알 명중] ID: {bulletInstanceID} - 첫 연쇄 명중. 데미지 감소 적용: {damage}");
+                this.currentDamage *= 0.3f; // PlayerBulletBehavior의 currentDamage 필드를 직접 수정
+                // Debug.Log($"[TeslaBulletBehavior] OnEnemyHitted ({this.gameObject.name}) - 첫 연쇄 명중. 데미지 감소 적용: {this.currentDamage}");
             }
 
-            if (hitsPerformed >= targetsHitGoal || targets.Count == 0)
+            // 목표 연쇄 횟수를 달성했거나 더 이상 공격할 타겟이 없으면 총알 비활성화
+            if (hitsPerformed >= targetsHitGoal || targets == null || targets.Count == 0)
             {
-                Debug.Log($"[테슬라 총알 명중] ID: {bulletInstanceID} - 투사체 비활성화. 이유: 명중 횟수 달성({hitsPerformed}/{targetsHitGoal}) 또는 남은 타겟 없음({targets.Count}).");
+                // Debug.Log($"[TeslaBulletBehavior] OnEnemyHitted ({this.gameObject.name}) - 투사체 비활성화. 이유: 명중 횟수 달성({hitsPerformed}/{targetsHitGoal}) 또는 남은 타겟 없음({(targets != null ? targets.Count : 0)}).");
                 DisableBullet();
             }
             else
             {
-                if (targets.Count > 0 && targets[0] != null && targets[0].gameObject.activeInHierarchy && !targets[0].IsDead) {
-                    Debug.Log($"[테슬라 총알 명중] ID: {bulletInstanceID} - 연쇄 공격 계속. 다음 타겟: {targets[0].gameObject.name}. 투사체 활성 유지.");
-                } else {
-                     Debug.LogWarning($"[테슬라 총알 명중] ID: {bulletInstanceID} - 연쇄 공격 계속하려 했으나, 다음 타겟이 유효하지 않음. 투사체 비활성화.");
-                     // 필요시 다음 타겟 상세 정보 로깅
-                     DisableBullet(); 
-                }
+                // 다음 타겟이 있다면 FixedUpdate에서 해당 타겟으로 이동 및 공격 계속
+                // Debug.Log($"[TeslaBulletBehavior] OnEnemyHitted ({this.gameObject.name}) - 연쇄 공격 계속. 다음 타겟 후보: {targets[0].gameObject.name}. 남은 타겟 수: {targets.Count}");
             }
-            Debug.Log($"[테슬라 총알 명중] ID: {bulletInstanceID} - OnEnemyHitted 로직 종료. 명중 대상: {baseEnemyBehavior.gameObject.name}.");
         }
 
         /// <summary>
         /// 장애물에 명중했을 때 호출됩니다.
-        /// 기본 장애물 충돌 처리와 함께 특정 벽 충돌 파티클을 재생하고 투사체를 비활성화합니다.
         /// </summary>
         protected override void OnObstacleHitted()
         {
-            string bulletID = this.gameObject.GetInstanceID().ToString();
-            Debug.LogWarning($"[테슬라 총알 장애물 명중] ID: {bulletID} - OnObstacleHitted 호출됨. 투사체 비활성화 예정.");
-            
+            // PlayerBulletBehavior의 OnObstacleHitted가 먼저 호출되어 기본 처리 (비활성화 등)
             base.OnObstacleHitted(); 
 
-            // ParticlesController.IsInitialised 체크 제거
             ParticlesController.PlayParticle(PARTICLE_WALL_HIT_HASH).SetPosition(transform.position);
             
+            // 추가적으로 확실히 비활성화
             if (gameObject.activeSelf) 
             {
                  DisableBullet(); 
@@ -246,15 +206,15 @@ namespace Watermelon.SquadShooter
         }
 
         /// <summary>
-        /// 투사체 게임 오브젝트를 비활성화하고 트레일 렌더러를 초기화합니다.
+        /// 투사체 게임 오브젝트를 비활성화하고 트레일 렌더러를 정리합니다.
         /// </summary>
         private void DisableBullet()
         {
             if (!gameObject.activeSelf) 
             {
-                return;
+                return; // 이미 비활성화된 경우 중복 호출 방지
             }
-            Debug.Log($"[테슬라 총알] ID: {this.gameObject.GetInstanceID()} - DisableBullet 호출됨. 비활성화 처리 시작.");
+            // Debug.Log($"[TeslaBulletBehavior] DisableBullet ({this.gameObject.name}) - 비활성화 처리 시작.");
             if(trailRenderer != null) 
                  trailRenderer.Clear();
             gameObject.SetActive(false);

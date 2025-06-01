@@ -18,6 +18,7 @@ MonoBehaviour:
   experienceDatabase: {fileID: 11400000, guid: 6153754415ab8d84d8237d49f585e3b6, type: 2}
   balanceDatabase: {fileID: 11400000, guid: c5d657e03add81645a8c0157d68849b9, type: 2}
   enemiesDatabase: {fileID: 11400000, guid: 5d0be022a2a28144188559baa2911464, type: 2}
+  petDatabase: {fileID: 11400000, guid: 8746a1c56ce67704f9e3571cf4f6dd49, type: 2}
   playerPrefab: {fileID: 4402184686770468089, guid: 0a2969074fd41754aa55fcad338c7e27,
     type: 3}
   invulnerabilityAfrerReviveDuration: 5
@@ -41,7 +42,15 @@ MonoBehaviour:
     previewObject: {fileID: 8998117227198249967, guid: 1ae4082f8cb03244ea6d6eb81973e9b4,
       type: 3}
   defaultWorldSprite: {fileID: 21300000, guid: d5409f73f9a9eeb49836e183f8cfd36e, type: 3}
+  floatingTextPresets:
+  - name: Hit
+    prefab: {fileID: 1342752242664368034, guid: e35f6126e485b4847ab7c2b0f86303ec,
+      type: 3}
+    poolSize: 20
+  - name: PlayerHit
+    prefab: {fileID: 1342752242664368034, guid: 46d4c4a57b47bea4191101d96fb66195,
+      type: 3}
+    poolSize: 10
   revivePrice:
     currencyType: 0
     price: 400
-  petDatabase: {fileID: 11400000, guid: 8746a1c56ce67704f9e3571cf4f6dd49, type: 2}

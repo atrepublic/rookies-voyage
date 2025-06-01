@@ -293,6 +293,11 @@ namespace Watermelon
             // 오버레이 표시 후 게임 씬 로드
             Overlay.Show(0.3f, () =>
             {
+                // ▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼ [ 추가된 부분 ] ▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼
+                Debug.Log("[UIMainMenu] PlayButton - 게임 씬 로드 직전. PoolManager의 모든 풀을 정리합니다.");
+                PoolManager.ClearAllPools(); // 플레이 씬 로드 전에 모든 풀 정리
+                // ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲ [ 추가 완료 ] ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲
+
                 SceneManager.LoadScene("Game"); // "Game" 씬 로드
 
                 Overlay.Hide(0.3f, null); // 오버레이 숨김
